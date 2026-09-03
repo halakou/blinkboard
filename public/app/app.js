@@ -11,9 +11,10 @@
   var statusEl = document.getElementById("status");
   var payBtn = document.getElementById("pay");
   if (tg && tg.MainButton) {
-    payBtn.hidden = true;
-    document.body.classList.add("has-main-btn");
+    try { tg.MainButton.hide(); } catch (e) {}
   }
+  payBtn.hidden = false;
+  document.body.classList.remove("has-main-btn");
   var titleEl = document.getElementById("title");
   var bodyEl = document.getElementById("body");
   var ctaEl = document.getElementById("cta");
@@ -54,37 +55,19 @@
   }
 
   function syncMain() {
-    var label = payLabel();
-    payBtn.textContent = label;
-    if (!tg || !tg.MainButton) {
-      payBtn.hidden = false;
-      document.body.classList.remove("has-main-btn");
-      return;
-    }
-    payBtn.hidden = true;
-    document.body.classList.add("has-main-btn");
-    try {
-      if (tg.MainButton.setParams) {
-        tg.MainButton.setParams({ text: label, color: "#238636", text_color: "#ffffff" });
-      } else {
-        tg.MainButton.setText(label);
-      }
-      tg.MainButton.show();
-    } catch (e) {
-      try { tg.MainButton.setText(label); tg.MainButton.show(); } catch (e2) {}
+    payBtn.textContent = payLabel();
+    payBtn.hidden = false;
+    document.body.classList.remove("has-main-btn");
+    if (tg && tg.MainButton) {
+      try { tg.MainButton.hide(); } catch (e) {}
     }
   }
 
   function preview() {
-    document.getElementById("stage").setAttribute("data-theme", state.theme);
-    document.getElementById("pv-kind").textContent = state.kind;
-    var p = currentPlan();
-    document.getElementById("pv-plan").textContent = p ? p.label : "";
-    document.getElementById("pv-title").textContent = titleEl.value.trim() || "Your headline";
-    document.getElementById("pv-body").textContent = bodyEl.value.trim() || "The page text appears here as you type.";
-    document.getElementById("title-n").textContent = titleEl.value.length + "/80";
-    document.getElementById("body-n").textContent = bodyEl.value.length + "/600";
-    document.getElementById("cta-need").textContent = state.kind === "link" ? "(required)" : "(optional)";
+    var tn = document.getElementById("title-n");
+    var bn = document.getElementById("body-n");
+    if (tn) tn.textContent = titleEl.value.length + "/80";
+    if (bn) bn.textContent = bodyEl.value.length + "/600";
   }
 
   function openInvoice(url) {
@@ -119,7 +102,7 @@
       var b = document.createElement("button");
       b.type = "button";
       b.className = "chip" + (p.id === state.planId ? " on" : "");
-      b.textContent = p.label + " · " + p.stars + "⭐";
+      b.innerHTML = p.label + "<small>" + p.stars + " Stars</small>";
       b.addEventListener("click", function () {
         state.planId = p.id;
         haptic();
@@ -143,7 +126,8 @@
     list.forEach(function (th) {
       var b = document.createElement("button");
       b.type = "button";
-      b.className = "chip" + (th.id === state.theme ? " on" : "");
+      b.className = "swatch" + (th.id === state.theme ? " on" : "");
+      b.setAttribute("data-theme", th.id);
       b.textContent = th.label;
       b.addEventListener("click", function () {
         state.theme = th.id;
@@ -212,15 +196,11 @@
   }
 
   payBtn.addEventListener("click", pay);
-  if (tg && tg.MainButton) {
-    tg.MainButton.onClick(pay);
-  }
-
-  var sample = document.getElementById("sample");
-  if (sample) {
-    sample.addEventListener("click", function (e) {
-      e.preventDefault();
-      openLink("https://blinkboard.pages.dev/preview/eightbit");
+  var zone = document.getElementById("photo-zone");
+  if (zone) {
+    zone.addEventListener("click", function () {
+      if (tg && tg.showAlert) tg.showAlert("Send the photo in the Blinkboard chat. Cloud image storage is not enabled on this account yet.");
+      else show("Send the photo in the Blinkboard chat.", true);
     });
   }
 

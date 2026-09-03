@@ -2,64 +2,70 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
   <meta name="theme-color" content="#0d1117"/>
   <meta name="robots" content="noindex"/>
+  <title>Blinkboard Mini App</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
-  <title>Blinkboard</title>
-  <link rel="stylesheet" href="/app/app.css?v=5"/>
+  <link rel="stylesheet" href="/app/app.css?v=6"/>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <header class="bar">
-    <span class="word"><img src="/logo.svg" width="22" height="22" alt=""/> Blinkboard</span>
-    <a class="quiet" href="/preview/eightbit" id="sample">Sample</a>
+    <span class="word"><span class="live-dot"></span> Create Board</span>
+    <span class="kicker">v2.0</span>
   </header>
   <main>
     <p id="status" class="status" hidden></p>
 
-    <div class="stage" id="stage" data-theme="eightbit">
-      <p class="stage-kicker"><span id="pv-kind">promo</span> · <span id="pv-plan">24 hours</span></p>
-      <h2 id="pv-title">Your headline</h2>
-      <p id="pv-body">The page text appears here as you type.</p>
-    </div>
+    <section class="card">
+      <label>Headline <span class="req">*</span> <span class="count" id="title-n">0/80</span>
+        <input id="title" maxlength="80" autocomplete="off" placeholder="e.g. Flash Sale 50% OFF" dir="auto"/>
+      </label>
+      <label>Message body <span class="count" id="body-n">0/600</span>
+        <textarea id="body" maxlength="600" rows="4" placeholder="Provide details here..." dir="auto"></textarea>
+      </label>
+      <label>Action URL (optional)
+        <input id="cta" maxlength="2048" inputmode="url" placeholder="https://"/>
+      </label>
+    </section>
 
-    <h2>Duration</h2>
-    <div id="plans" class="row"></div>
+    <section class="card">
+      <p class="lab">Cover image (optional)</p>
+      <button type="button" class="upload" id="photo-zone">Tap to add photo — sent in the chat bot for now</button>
+    </section>
 
-    <h2>Look</h2>
-    <div id="themes" class="row"></div>
+    <section class="card">
+      <p class="lab">Duration &amp; pricing</p>
+      <div id="plans" class="grid3"></div>
+      <p class="lab">Visual theme</p>
+      <div id="themes" class="swatches"></div>
+      <label class="priv">
+        <span>
+          <strong>Private page</strong>
+          <small>Do not post to @Blinkboards (+5 Stars)</small>
+        </span>
+        <input type="checkbox" id="priv"/>
+      </label>
+    </section>
 
-    <h2>Type</h2>
-    <div class="row">
-      <button type="button" class="chip kind on" data-kind="promo">Promo</button>
-      <button type="button" class="chip kind" data-kind="notice">Notice</button>
-      <button type="button" class="chip kind" data-kind="link">Link</button>
-    </div>
-
-    <label>Headline <span class="count" id="title-n">0/80</span>
-      <input id="title" maxlength="80" autocomplete="off" placeholder="Tonight only"/>
-    </label>
-    <label>Text <span class="count" id="body-n">0/600</span>
-      <textarea id="body" maxlength="600" rows="4" placeholder="What should people see?"></textarea>
-    </label>
-    <label>https link <span class="hint-inline" id="cta-need">(optional)</span>
-      <input id="cta" maxlength="2048" inputmode="url" placeholder="https://"/>
-    </label>
-
-    <label class="priv">
-      <input type="checkbox" id="priv"/>
-      Private page — not posted to @Blinkboards (+5 Stars)
-    </label>
-
-    <button type="button" id="pay" class="go">Pay with Stars</button>
-    <p class="hint">Photo: send it in the chat bot. Live URL also arrives in chat. Channel: @Blinkboards</p>
+    <p class="hint">Type: promo / notice / link
+      <span class="row kinds">
+        <button type="button" class="chip kind on" data-kind="promo">Promo</button>
+        <button type="button" class="chip kind" data-kind="notice">Notice</button>
+        <button type="button" class="chip kind" data-kind="link">Link</button>
+      </span>
+    </p>
 
     <section id="mine-wrap" hidden>
-      <h2>Your live pages</h2>
+      <p class="lab">Your live pages</p>
       <div id="mine"></div>
     </section>
   </main>
-  <script src="/app/app.js?v=5"></script>
+
+  <div class="dock">
+    <button type="button" id="pay" class="go">Pay Stars</button>
+  </div>
+  <script src="/app/app.js?v=6"></script>
 </body>
 </html>
