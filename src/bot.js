@@ -82,9 +82,41 @@ async function uniqueCode(db) {
 function helpText(lang) {
   return t(
     lang,
-    "Blinkboard rents a public page for a few hours. No account.\n\n/new — rent a page\n/cancel — stop\n/rules — what is blocked\n\nYou pick a duration, send text (and optional photo + https link), pay in Telegram Stars, and get a URL like /a/XXXX. The page dies when the clock runs out.",
-    "Blinkboard یک صفحهٔ عمومی موقت اجاره می‌دهد. بدون حساب.\n\n/new — صفحه جدید\n/cancel — توقف\n/rules — موارد ممنوع\n\nمدت را انتخاب می‌کنی، متن (و در صورت نیاز عکس و لینک https) می‌فرستی، با استارز تلگرام پرداخت می‌کنی، آدرس /a/XXXX می‌گیری. بعد از انقضا صفحه خاموش می‌شود."
+    "Blinkboard rents a public page for a few hours. No account. No Mini App — this chat is the product.\n\n/new — rent a page\n/cancel — stop\n/rules — what is blocked\n\nYou pick a duration, send text (and optional photo + https link), pay in Telegram Stars, and get a URL like /a/XXXX. The page dies when the clock runs out.",
+    "Blinkboard یک صفحهٔ عمومی موقت اجاره می‌دهد. بدون حساب. مینی‌اپ ندارد — همه چیز همین چت است.\n\n/new — صفحه جدید\n/cancel — توقف\n/rules — موارد ممنوع\n\nمدت را انتخاب می‌کنی، متن (و در صورت نیاز عکس و لینک https) می‌فرستی، با استارز تلگرام پرداخت می‌کنی، آدرس /a/XXXX می‌گیری. بعد از انقضا صفحه خاموش می‌شود."
   );
+}
+
+function startText(lang) {
+  return t(
+    lang,
+    "Blinkboard — rent a public page from this chat.\n\nNo site account. No Mini App. You write here, pay Stars, get a URL like blinkboard.pages.dev/a/XXXX. When the time is up, the page is gone.\n\n1 hour €0.10 · 6h €0.25 · 24h €0.79 · 3d €1.99 · 7d €3.99",
+    "Blinkboard — از همین چت یک صفحهٔ عمومی اجاره کن.\n\nبدون حساب سایت. مینی‌اپ ندارد. اینجا می‌نویسی، با استارز پرداخت می‌کنی، آدرس blinkboard.pages.dev/a/XXXX می‌گیری. وقت که تمام شود صفحه خاموش است.\n\n۱ ساعت €0.10 · ۶ساعت €0.25 · ۲۴ساعت €0.79 · ۳روز €1.99 · ۷روز €3.99"
+  );
+}
+
+function startKeyboard(lang, origin) {
+  const site = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
+  return kb([
+    [{ text: t(lang, "Rent a page", "اجارهٔ صفحه"), callback_data: "new" }],
+    [
+      { text: t(lang, "How it works", "روش کار"), callback_data: "help" },
+      { text: t(lang, "Website", "سایت"), url: site },
+    ],
+  ]);
+}
+
+async function beginNew(env, chatId, userId, lang) {
+  const np = await gated(env, userId, "newPage");
+  if (!np.ok) {
+    await sendText(env, chatId, t(lang, "Daily page limit reached.", "سقف روزانه پر شده."));
+    return { ok: true };
+  }
+  await putSession(env.DB, userId, "plan", {});
+  await sendText(env, chatId, t(lang, "How long should this page stay up?", "صفحه چند ساعت بالا بماند؟"), {
+    reply_markup: planKeyboard(lang, env),
+  });
+  return { ok: true };
 }
 
 export async function handleUpdate(env, update, origin) {
@@ -120,20 +152,17 @@ async function handleMessage(env, message, origin) {
     await sendText(env, chatId, t(lang, "Cancelled.", "لغو شد."));
     return { ok: true };
   }
-  if (cmd === "/start" || cmd === "/new" || cmd === "/help") {
-    if (cmd === "/help") {
-      await sendText(env, chatId, helpText(lang));
-      return { ok: true };
-    }
-    const np = await gated(env, userId, "newPage");
-    if (!np.ok) {
-      await sendText(env, chatId, t(lang, "Daily page limit reached.", "سقف روزانه پر شده."));
-      return { ok: true };
-    }
-    await putSession(env.DB, userId, "plan", {});
-    await sendText(env, chatId, t(lang, "How long should this page stay up?", "صفحه چند ساعت بالا بماند؟"), {
-      reply_markup: planKeyboard(lang, env),
-    });
+  if (cmd === "/help") {
+    await sendText(env, chatId, helpText(lang));
+    return { ok: true };
+  }
+  if (cmd === "/new") {
+    return beginNew(env, chatId, userId, lang);
+  }
+  if (cmd === "/start") {
+    const payload = text.split(/\s+/).slice(1).join(" ").toLowerCase();
+    if (payload === "new") return beginNew(env, chatId, userId, lang);
+    await sendText(env, chatId, startText(lang), { reply_markup: startKeyboard(lang, origin) });
     return { ok: true };
   }
   if (cmd === "/rules") {
@@ -216,6 +245,13 @@ async function handleCallback(env, cq, origin) {
     await clearSession(env.DB, userId);
     await sendText(env, chatId, t(lang, "Cancelled.", "لغو شد."));
     return { ok: true };
+  }
+  if (data === "help") {
+    await sendText(env, chatId, helpText(lang));
+    return { ok: true };
+  }
+  if (data === "new") {
+    return beginNew(env, chatId, userId, lang);
   }
   const ses = await getSession(env.DB, userId);
   if (data.startsWith("plan:") && ses.state === "plan") {
