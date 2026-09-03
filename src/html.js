@@ -169,7 +169,7 @@ export function renderPreview(theme, origin) {
   return renderBoard({
     ...SAMPLE_PAGE,
     theme: t,
-    code: "DEMO",
+    code: "GAME",
     expires_at: Date.now() + 6 * 3600 * 1000,
     image_key: null,
   }, origin);

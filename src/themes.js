@@ -15,7 +15,7 @@ export function themeHref(id) {
 }
 
 export const SAMPLE_PAGE = Object.freeze({
-  code: "DEMO",
+  code: "GAME",
   kind: "promo",
   title: "Neon Dumpling — tonight only",
   body: "Walk-in kitchen on 14th. Chili oil dumplings, cold beer, no reservations. Kitchen open until 1am. Tell them Blinkboard sent you.",
