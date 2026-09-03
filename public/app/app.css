@@ -31,6 +31,8 @@ h2 { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: 
   width: 100%; margin-top: 18px; background: var(--ok); color: #fff; border-color: transparent; font-weight: 600;
 }
 .go:disabled { opacity: .55; }
+body.has-main-btn #pay { display: none !important; }
+body.has-main-btn main { padding-bottom: 28px; }
 label { display: block; margin-top: 12px; font-size: .82rem; color: var(--muted); }
 .count, .hint-inline { float: right; font-variant-numeric: tabular-nums; }
 input, textarea {

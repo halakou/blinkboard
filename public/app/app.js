@@ -10,6 +10,10 @@
   var state = { planId: "24h", kind: "promo", theme: "eightbit", plans: [], lastCode: "" };
   var statusEl = document.getElementById("status");
   var payBtn = document.getElementById("pay");
+  if (tg && tg.MainButton) {
+    payBtn.hidden = true;
+    document.body.classList.add("has-main-btn");
+  }
   var titleEl = document.getElementById("title");
   var bodyEl = document.getElementById("body");
   var ctaEl = document.getElementById("cta");
@@ -46,11 +50,25 @@
   }
 
   function syncMain() {
-    payBtn.textContent = payLabel();
-    if (!tg || !tg.MainButton) return;
-    tg.MainButton.setText(payLabel());
-    tg.MainButton.setParams({ color: "#238636", text_color: "#ffffff" });
-    tg.MainButton.show();
+    var label = payLabel();
+    payBtn.textContent = label;
+    if (!tg || !tg.MainButton) {
+      payBtn.hidden = false;
+      document.body.classList.remove("has-main-btn");
+      return;
+    }
+    payBtn.hidden = true;
+    document.body.classList.add("has-main-btn");
+    try {
+      if (tg.MainButton.setParams) {
+        tg.MainButton.setParams({ text: label, color: "#238636", text_color: "#ffffff" });
+      } else {
+        tg.MainButton.setText(label);
+      }
+      tg.MainButton.show();
+    } catch (e) {
+      try { tg.MainButton.setText(label); tg.MainButton.show(); } catch (e2) {}
+    }
   }
 
   function preview() {
