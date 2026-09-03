@@ -1,0 +1,32 @@
+body.theme-midnight {
+  --paper: #0d1117;
+  --ink: #e6edf3;
+  --muted: #8b949e;
+  --line: #30363d;
+  --clay: #f0883e;
+  --serif: ui-sans-serif, "Segoe UI", system-ui, sans-serif;
+  --sans: ui-sans-serif, "Segoe UI", system-ui, sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+}
+body.theme-midnight .board {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 32px 22px;
+}
+body.theme-midnight h1 {
+  font-family: inherit;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+}
+body.theme-midnight .cta {
+  background: #238636;
+  color: #fff;
+  border-radius: 6px;
+}
+body.theme-midnight .cta:hover { background: #2ea043; }
+body.theme-midnight .hero { border-color: #30363d; background: #010409; }
+body.theme-midnight .qr { background: #fff; border-color: #30363d; }
+body.theme-midnight .by, body.theme-midnight .by a { color: #8b949e; }
+body.theme-midnight .kind { color: #f0883e; }

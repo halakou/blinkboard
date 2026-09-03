@@ -41,6 +41,7 @@ export async function handleRentApi(env, request, origin) {
     planId: body.planId,
     origin,
     rateKey,
+    theme: body.theme,
   });
   if (!rent.ok) {
     return {

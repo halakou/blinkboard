@@ -1,5 +1,6 @@
 import { escapeHtml, escapeAttr } from "./escape.js";
 import { formatEur, listPlans } from "./pricing.js";
+import { normalizeTheme, themeHref, SAMPLE_PAGE } from "./themes.js";
 
 function layout({ title, body, extraCss = "", origin, description = "", path = "/" }) {
   const o = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
@@ -10,7 +11,7 @@ function layout({ title, body, extraCss = "", origin, description = "", path = "
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="theme-color" content="#f6f1e8"/>
+<meta name="theme-color" content="#0d1117"/>
 <meta name="description" content="${escapeAttr(desc)}"/>
 <link rel="canonical" href="${escapeAttr(url)}"/>
 <meta property="og:type" content="website"/>
@@ -130,6 +131,7 @@ export function renderGone(status = "expired") {
 
 export function renderBoard(page, origin) {
   const url = `${origin}/a/${page.code}`;
+  const theme = normalizeTheme(page.theme);
   const img = page.image_key ? `<img class="hero" src="/m/${encodeURIComponent(page.code)}" alt=""/>` : "";
   const cta = page.cta_url
     ? `<a class="cta" rel="nofollow noopener noreferrer" href="${escapeAttr(page.cta_url)}">Open link</a>`
@@ -141,12 +143,13 @@ export function renderBoard(page, origin) {
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="robots" content="noindex,nofollow"/>
-<meta name="theme-color" content="#f6f1e8"/>
+<meta name="theme-color" content="#0d1117"/>
 <title>${escapeHtml(page.title)} — Blinkboard</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
 <link rel="stylesheet" href="/page.css"/>
+<link rel="stylesheet" href="${escapeAttr(themeHref(theme))}"/>
 </head>
-<body>
+<body class="theme-${escapeAttr(theme)}">
 <article class="board" data-exp="${escapeAttr(page.expires_at || "")}">
   <p class="meta"><span class="kind">${escapeHtml(page.kind)}</span> <span class="left" id="left">time left</span></p>
   <h1>${escapeHtml(page.title)}</h1>
@@ -159,6 +162,17 @@ export function renderBoard(page, origin) {
 <script src="/page.js" defer></script>
 </body>
 </html>`;
+}
+
+export function renderPreview(theme, origin) {
+  const t = normalizeTheme(theme);
+  return renderBoard({
+    ...SAMPLE_PAGE,
+    theme: t,
+    code: "DEMO",
+    expires_at: Date.now() + 6 * 3600 * 1000,
+    image_key: null,
+  }, origin);
 }
 
 export function pricingNote(overrides) {

@@ -44,11 +44,12 @@ export async function hitRate(db, key, windowStart, limit) {
 
 export async function insertPage(db, page) {
   await db.prepare(
-    `INSERT INTO pages (code, owner_id, kind, title, body, cta_url, image_key, plan_id, stars, eur_cents, status, created_at, invoice_payload)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO pages (code, owner_id, kind, title, body, cta_url, image_key, plan_id, stars, eur_cents, status, created_at, invoice_payload, theme)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     page.code, page.owner_id, page.kind, page.title, page.body, page.cta_url, page.image_key,
-    page.plan_id, page.stars, page.eur_cents, page.status, page.created_at, page.invoice_payload
+    page.plan_id, page.stars, page.eur_cents, page.status, page.created_at, page.invoice_payload,
+    page.theme || "classic"
   ).run();
 }
 

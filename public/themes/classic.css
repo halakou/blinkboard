@@ -1,0 +1,2 @@
+/* Classic — paper board (default tokens live in page.css) */
+body.theme-classic { background: var(--paper); color: var(--ink); }

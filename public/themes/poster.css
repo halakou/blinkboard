@@ -1,0 +1,29 @@
+body.theme-poster {
+  --paper: #111;
+  --ink: #f4f0e8;
+  --muted: #b9b0a4;
+  --line: #3a342c;
+  --clay: #ff4d1c;
+  --serif: Georgia, "Times New Roman", serif;
+  --sans: Georgia, "Times New Roman", serif;
+  background: #111;
+  color: #f4f0e8;
+}
+body.theme-poster .board { max-width: 36rem; padding: 48px 22px 16px; }
+body.theme-poster h1 {
+  font-size: clamp(2.4rem, 10vw, 4.2rem);
+  letter-spacing: -0.05em;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+body.theme-poster .body { font-size: 1.2rem; max-width: 28rem; }
+body.theme-poster .cta {
+  display: inline-block;
+  width: auto;
+  padding: 14px 28px;
+  border-radius: 999px;
+  background: #ff4d1c;
+}
+body.theme-poster .kind { letter-spacing: 0.2em; }
+body.theme-poster .hero { border-radius: 0; }
+body.theme-poster .by a { color: #f4f0e8; }

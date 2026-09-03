@@ -4,6 +4,7 @@ import { moderatePage } from "./moderate.js";
 import { clip, rateWindow, LIMITS } from "./security.js";
 import { getPage, insertPage, insertPayment, putSession, hitRate } from "./store.js";
 import { downloadTelegramFile } from "./telegram.js";
+import { normalizeTheme } from "./themes.js";
 
 export function planOverrides(env) {
   const eurUsd = Number(env && env.EUR_USD);
@@ -23,7 +24,7 @@ export async function uniqueCode(db) {
   throw new Error("code_collision");
 }
 
-export async function createPendingRent(env, { userId, kind, title, body, ctaUrl, planId, imageFileId, origin, rateKey, skipNewLimit }) {
+export async function createPendingRent(env, { userId, kind, title, body, ctaUrl, planId, imageFileId, origin, rateKey, skipNewLimit, theme }) {
   const uid = Number(userId);
   const owner = Number.isInteger(uid) && uid > 0 ? uid : 0;
   const plan = getPlan(planId, planOverrides(env));
@@ -74,6 +75,7 @@ export async function createPendingRent(env, { userId, kind, title, body, ctaUrl
     status: "pending_pay",
     created_at: now,
     invoice_payload: payload,
+    theme: normalizeTheme(theme),
   });
   await insertPayment(env.DB, {
     payload,

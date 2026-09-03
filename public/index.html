@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="description" content="Rent a public page from Telegram for an hour or a week. No account. Stars only."/>
+  <meta name="description" content="Rent a public page from Telegram for an hour or a week. Pick a look. Pay Stars. It expires."/>
   <link rel="canonical" href="https://blinkboard.pages.dev/"/>
-  <meta property="og:title" content="Blinkboard — rent a page from Telegram"/>
-  <meta property="og:description" content="Write it in Telegram. Pay Stars. Get /a/XXXX. It expires automatically."/>
+  <meta property="og:title" content="Blinkboard"/>
+  <meta property="og:description" content="A public page for an hour. From Telegram. Stars only."/>
   <meta property="og:image" content="https://blinkboard.pages.dev/logo.png"/>
   <meta property="og:url" content="https://blinkboard.pages.dev/"/>
   <meta name="twitter:card" content="summary"/>
-  <meta name="theme-color" content="#f6f1e8"/>
+  <meta name="theme-color" content="#0d1117"/>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
   <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
   <title>Blinkboard — rent a page from Telegram</title>
@@ -19,63 +19,80 @@
 <body>
   <header class="bar">
     <a class="brand" href="/"><img src="/logo.svg" width="28" height="28" alt=""/>Blinkboard</a>
-    <a class="go" href="/go">Open in Telegram</a>
+    <nav class="nav">
+      <a href="/how">How</a>
+      <a href="#looks">Looks</a>
+      <a href="#price">Pricing</a>
+      <a class="go" href="/go">Open Telegram</a>
+    </nav>
   </header>
 
   <section class="hero">
     <div class="hero-copy">
-      <p class="kicker">Telegram-first · no accounts</p>
-      <h1>Rent a page<br>for an hour.</h1>
-      <p class="lede">Write it in Telegram. Pay in Stars. Get <code>/a/XXXX</code>. It also appears on the live channel until the clock ends.</p>
+      <p class="kicker">Telegram · Stars · no account</p>
+      <h1>A public page.<br>For an hour.</h1>
+      <p class="lede">Write it in Telegram. Choose a look — classic, 8-bit, midnight, poster. Pay Stars. Get <code>/a/XXXX</code>. When the clock ends, it’s gone.</p>
       <p class="actions">
         <a class="go solid" href="/go">Start in Telegram</a>
-        <a class="quiet" href="/how">How it works</a>
+        <a class="ghost" href="/preview/eightbit">See a live sample</a>
       </p>
     </div>
-    <aside class="mock" aria-hidden="true">
-      <p class="mock-meta"><span>promo</span><span>05:59:12 left</span></p>
-      <h2>Studio open this weekend</h2>
-      <div class="mock-img"></div>
-      <p>Drop-in hours, coffee on us. No booking. Just show up on Canal Street.</p>
-      <span class="mock-cta">Open link</span>
+    <aside class="stage" id="stage" data-theme="eightbit">
+      <div class="stage-bar">
+        <span>preview</span>
+        <span id="stage-name">8-bit</span>
+      </div>
+      <article class="mini-board">
+        <p class="mini-meta"><span>promo</span><span>05:59 left</span></p>
+        <h2 id="stage-title">Neon Dumpling</h2>
+        <p id="stage-body">Tonight only. Chili oil, cold beer, kitchen until 1am.</p>
+        <span class="mini-cta">Open link</span>
+      </article>
     </aside>
   </section>
 
+  <section id="looks" class="looks">
+    <h2>Pick the look.</h2>
+    <p class="sub">Not free HTML — four locked templates. Same content, different skin. Free Cloudflare assets.</p>
+    <div class="look-row" role="list">
+      <button type="button" class="look" data-theme="classic" data-label="Classic">Classic</button>
+      <button type="button" class="look on" data-theme="eightbit" data-label="8-bit">8-bit</button>
+      <button type="button" class="look" data-theme="midnight" data-label="Midnight">Midnight</button>
+      <button type="button" class="look" data-theme="poster" data-label="Poster">Poster</button>
+    </div>
+    <p class="sub"><a href="/preview/classic">classic</a> · <a href="/preview/eightbit">8-bit sample</a> · <a href="/preview/midnight">midnight</a> · <a href="/preview/poster">poster</a></p>
+  </section>
+
   <section id="price" class="price">
-    <h2>How long, how much.</h2>
-    <p class="sub">Prices are in euros. You pay the Stars equivalent in Telegram. Changeable later without rewriting the bot.</p>
+    <h2>How long.</h2>
     <ol class="plans">
-      <li><strong>1 hour</strong><b>€0.10</b></li>
-      <li><strong>6 hours</strong><b>€0.25</b></li>
-      <li class="feat"><strong>24 hours</strong><b>€0.79</b></li>
-      <li><strong>3 days</strong><b>€1.99</b></li>
-      <li><strong>7 days</strong><b>€3.99</b></li>
+      <li><span>1 hour</span><b>€0.10</b></li>
+      <li><span>6 hours</span><b>€0.25</b></li>
+      <li class="feat"><span>24 hours</span><b>€0.79</b></li>
+      <li><span>3 days</span><b>€1.99</b></li>
+      <li><span>7 days</span><b>€3.99</b></li>
     </ol>
+    <p class="sub">Euros listed. You pay Stars in Telegram.</p>
   </section>
 
-  <section class="steps">
-    <h2>From chat to URL.</h2>
+  <section class="pipe">
+    <h2>Chat → URL.</h2>
     <ol>
-      <li><span>1</span> Pick a duration and a page type (promo, notice, or link).</li>
-      <li><span>2</span> Send a headline, text, optional photo, optional https link.</li>
-      <li><span>3</span> We check spam, phishing, malware, scams, and illegal content.</li>
-      <li><span>4</span> Pay the Stars invoice. Nothing is public before Telegram confirms.</li>
-      <li><span>5</span> Share <code>/a/XXXX</code>. QR and countdown ship with the page. Expiry is automatic.</li>
+      <li>Duration + look</li>
+      <li>Headline, text, optional link</li>
+      <li>Moderation</li>
+      <li>Stars</li>
+      <li><code>/a/XXXX</code> until the clock ends</li>
     </ol>
-  </section>
-
-  <section class="rules">
-    <h2>What we will not host.</h2>
-    <p>No free HTML. No shorteners. No IP or localhost links. No phishing, malware, scams, or illegal material. Admins can expire or block a page immediately.</p>
-    <p><a href="/rules">Full rules</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></p>
   </section>
 
   <footer class="foot">
     <span class="brand"><img src="/logo.svg" width="22" height="22" alt=""/>Blinkboard</span>
     <a href="/go">Bot</a>
-    <a href="https://t.me/Blinkboards">Live channel</a>
-    <a href="/how">How</a>
+    <a href="https://t.me/Blinkboards">Channel</a>
     <a href="/faq">FAQ</a>
+    <a href="/rules">Rules</a>
   </footer>
+  <script src="/landing.js" defer></script>
 </body>
 </html>

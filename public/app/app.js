@@ -6,7 +6,7 @@
     if (tg.setHeaderColor) tg.setHeaderColor("#f6f1e8");
   }
 
-  var state = { planId: "24h", kind: "promo", plans: [] };
+  var state = { planId: "24h", kind: "promo", theme: "eightbit", plans: [] };
   var statusEl = document.getElementById("status");
   var payBtn = document.getElementById("pay");
 
@@ -59,6 +59,29 @@
     });
   }
 
+  function renderThemes() {
+    var box = document.getElementById("themes");
+    if (!box) return;
+    var list = [
+      { id: "classic", label: "Classic" },
+      { id: "eightbit", label: "8-bit" },
+      { id: "midnight", label: "Midnight" },
+      { id: "poster", label: "Poster" },
+    ];
+    box.innerHTML = "";
+    list.forEach(function (th) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip" + (th.id === state.theme ? " on" : "");
+      b.textContent = th.label;
+      b.addEventListener("click", function () {
+        state.theme = th.id;
+        renderThemes();
+      });
+      box.appendChild(b);
+    });
+  }
+
   document.querySelectorAll(".kind").forEach(function (b) {
     b.addEventListener("click", function () {
       state.kind = b.getAttribute("data-kind");
@@ -78,6 +101,7 @@
     var body = {
       planId: state.planId,
       kind: state.kind,
+      theme: state.theme,
       title: document.getElementById("title").value,
       body: document.getElementById("body").value,
       ctaUrl: document.getElementById("cta").value,
@@ -116,6 +140,7 @@
         state.planId = state.plans[0].id;
       }
       renderPlans();
+      renderThemes();
     })
     .catch(function () {
       show("Could not load prices. Use the chat bot.", true);

@@ -1,7 +1,7 @@
 import { normalizeCode } from "./codes.js";
 import { secretsEqual } from "./security.js";
 import { handleUpdate, publicPage } from "./bot.js";
-import { renderBoard, renderGone, renderLegal, pageMarkdown } from "./html.js";
+import { renderBoard, renderGone, renderLegal, pageMarkdown, renderPreview } from "./html.js";
 import { qrSvg } from "./qr.js";
 import { runExpiry } from "./cron.js";
 import { downloadTelegramFile } from "./telegram.js";
@@ -14,6 +14,7 @@ import {
 } from "./discover.js";
 import { planOverrides } from "./rent.js";
 import { listPlans } from "./pricing.js";
+import { normalizeTheme } from "./themes.js";
 
 const SECURITY = {
   "X-Content-Type-Options": "nosniff",
@@ -141,9 +142,19 @@ export default {
       const page = await asset(env, request, "/index.html");
       if (page) return page;
     }
-    if (request.method === "GET" && (path === "/landing.css" || path === "/page.css" || path === "/page.js")) {
+    if (request.method === "GET" && (path === "/landing.css" || path === "/landing.js" || path === "/page.css" || path === "/page.js")) {
       const page = await asset(env, request, path);
       if (page) return page;
+    }
+    const themeCss = path.match(/^\/themes\/([a-z]+)\.css$/);
+    if (request.method === "GET" && themeCss) {
+      const id = normalizeTheme(themeCss[1]);
+      const page = await asset(env, request, `/themes/${id}.css`, { cache: "public, max-age=3600" });
+      if (page) return page;
+    }
+    const prev = path.match(/^\/preview\/([a-z]+)$/);
+    if (request.method === "GET" && prev) {
+      return html(renderPreview(prev[1], origin), 200, { cache: "no-store" }, request);
     }
     if (
       request.method === "GET" &&

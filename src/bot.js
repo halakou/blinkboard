@@ -10,6 +10,7 @@ import { sendText, sendInvoice, answerCb, answerPreCheckout, kb } from "./telegr
 import { createPendingRent } from "./rent.js";
 import { announceLive, channelPublicUrl } from "./channel.js";
 import { userIsAdmin, expireCode, blockCode, notifyAdmins } from "./admin.js";
+import { THEMES, normalizeTheme } from "./themes.js";
 
 function t(lang, en, fa) {
   return lang === "fa" ? fa : en;
@@ -58,6 +59,14 @@ function planKeyboard(lang, env) {
   }
   rows.push([{ text: t(lang, "Cancel", "لغو"), callback_data: "cancel" }]);
   return kb(rows);
+}
+
+function themeKeyboard(lang) {
+  const row = THEMES.map((th) => ({
+    text: lang === "fa" ? th.fa : th.label,
+    callback_data: `theme:${th.id}`,
+  }));
+  return kb([row.slice(0, 2), row.slice(2), [{ text: t(lang, "Cancel", "لغو"), callback_data: "cancel" }]]);
 }
 
 function kindKeyboard(lang) {
@@ -276,6 +285,12 @@ async function handleCallback(env, cq, origin) {
     const kind = data.slice(5);
     if (!["promo", "notice", "link"].includes(kind)) return { ok: true };
     ses.data.kind = kind;
+    await putSession(env.DB, userId, "theme", ses.data);
+    await sendText(env, chatId, t(lang, "Pick a look for the page.", "سبک صفحه را انتخاب کن."), { reply_markup: themeKeyboard(lang) });
+    return { ok: true };
+  }
+  if (data.startsWith("theme:") && ses.state === "theme") {
+    ses.data.theme = normalizeTheme(data.slice(6));
     await putSession(env.DB, userId, "title", ses.data);
     await sendText(env, chatId, t(lang, "Send a headline (max 80 characters).", "تیتر را بفرست (حداکثر ۸۰ نویسه)."));
     return { ok: true };
@@ -294,6 +309,7 @@ async function checkout(env, chatId, userId, data, origin, lang) {
     imageFileId: data.imageFileId,
     origin,
     skipNewLimit: true,
+    theme: data.theme,
   });
   if (!rent.ok) {
     if (rent.error === "plan") {
