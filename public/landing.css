@@ -41,6 +41,18 @@ code {
   text-decoration: none;
   letter-spacing: -0.02em;
 }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--ink);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+.brand img { width: 28px; height: 28px; border-radius: 7px; display: block; }
 .go {
   display: inline-block;
   background: var(--clay);
@@ -166,6 +178,9 @@ code {
 .foot {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   padding: 28px 20px 40px;
   color: var(--muted);
   max-width: 1080px;

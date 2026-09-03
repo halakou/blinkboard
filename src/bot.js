@@ -8,6 +8,7 @@ import {
 } from "./store.js";
 import { sendText, sendInvoice, answerCb, answerPreCheckout, kb } from "./telegram.js";
 import { createPendingRent } from "./rent.js";
+import { announceLive, dropChannelPost, channelPublicUrl } from "./channel.js";
 
 function t(lang, en, fa) {
   return lang === "fa" ? fa : en;
@@ -74,28 +75,30 @@ function kindKeyboard(lang) {
 function helpText(lang) {
   return t(
     lang,
-    "Blinkboard rents a public page for a few hours. No account.\n\nMenu button / Mini App — fill the form and pay Stars\n/new — same flow in chat (photo supported)\n/cancel — stop\n/rules — what is blocked\n\nYou get a URL like /a/XXXX. The page dies when the clock runs out.",
-    "Blinkboard یک صفحهٔ عمومی موقت اجاره می‌دهد. بدون حساب.\n\nدکمهٔ منو / مینی‌اپ — فرم و پرداخت استارز\n/new — همان جریان در چت (عکس هم می‌شود)\n/cancel — توقف\n/rules — موارد ممنوع\n\nآدرس /a/XXXX می‌گیری. بعد از انقضا صفحه خاموش می‌شود."
+    "Blinkboard rents a public page for a few hours. No account.\n\nMenu / Mini App — form and Stars\n/new — same in chat (photo too)\n/cancel — stop\n/rules — blocked content\n\nPaid pages go live at /a/XXXX and on the public channel @Blinkboards until they expire.",
+    "Blinkboard یک صفحهٔ عمومی موقت اجاره می‌دهد. بدون حساب.\n\nمنو / مینی‌اپ — فرم و استارز\n/new — همان در چت (با عکس)\n/cancel — توقف\n/rules — موارد ممنوع\n\nصفحهٔ پرداخت‌شده در /a/XXXX و کانال عمومی @Blinkboards زنده می‌ماند تا منقضی شود."
   );
 }
 
 function startText(lang) {
   return t(
     lang,
-    "Blinkboard — rent a public page from Telegram.\n\nOpen the Mini App (menu) or rent in this chat. Pay Stars. Get blinkboard.pages.dev/a/XXXX. When the time is up, the page is gone.\n\n1 hour €0.10 · 6h €0.25 · 24h €0.79 · 3d €1.99 · 7d €3.99",
-    "Blinkboard — از تلگرام یک صفحهٔ عمومی اجاره کن.\n\nمینی‌اپ (منو) را باز کن یا در همین چت اجاره کن. با استارز پرداخت کن. آدرس blinkboard.pages.dev/a/XXXX. وقت که تمام شود صفحه خاموش است.\n\n۱ ساعت €0.10 · ۶ساعت €0.25 · ۲۴ساعت €0.79 · ۳روز €1.99 · ۷روز €3.99"
+    "Blinkboard — rent a public page from Telegram.\n\nMini App, this chat, or watch live pages on @Blinkboards. Pay Stars. Get blinkboard.pages.dev/a/XXXX. When time is up, page and channel post are gone.\n\n1 hour €0.10 · 6h €0.25 · 24h €0.79 · 3d €1.99 · 7d €3.99",
+    "Blinkboard — از تلگرام یک صفحهٔ عمومی اجاره کن.\n\nمینی‌اپ، همین چت، یا صفحات زنده در @Blinkboards. استارز بپرداز. آدرس blinkboard.pages.dev/a/XXXX. وقت که تمام شود صفحه و پست کانال خاموش می‌شوند.\n\n۱ ساعت €0.10 · ۶ساعت €0.25 · ۲۴ساعت €0.79 · ۳روز €1.99 · ۷روز €3.99"
   );
 }
 
-function startKeyboard(lang, origin) {
+function startKeyboard(lang, origin, env) {
   const site = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
+  const ch = channelPublicUrl(env) || "https://t.me/Blinkboards";
   return kb([
     [{ text: t(lang, "Open Mini App", "باز کردن مینی‌اپ"), web_app: { url: `${site}/app` } }],
     [{ text: t(lang, "Rent in chat", "اجاره در چت"), callback_data: "new" }],
     [
-      { text: t(lang, "How it works", "روش کار"), callback_data: "help" },
+      { text: t(lang, "Live channel", "کانال زنده"), url: ch },
       { text: t(lang, "Website", "سایت"), url: site },
     ],
+    [{ text: t(lang, "How it works", "روش کار"), callback_data: "help" }],
   ]);
 }
 
@@ -155,11 +158,11 @@ async function handleMessage(env, message, origin) {
   if (cmd === "/start") {
     const payload = text.split(/\s+/).slice(1).join(" ").toLowerCase();
     if (payload === "new") return beginNew(env, chatId, userId, lang);
-    await sendText(env, chatId, startText(lang), { reply_markup: startKeyboard(lang, origin) });
+    await sendText(env, chatId, startText(lang), { reply_markup: startKeyboard(lang, origin, env) });
     return { ok: true };
   }
   if (cmd === "/rules") {
-    await sendText(env, chatId, t(lang, "No spam, phishing, malware, scams, or illegal content. https links only. No shorteners. No free HTML. Admin can expire or block instantly.", "اسپم، فیشینگ، بدافزار، کلاهبرداری و محتوای غیرقانونی ممنوع. فقط لینک https. بدون کوتاه‌کننده. بدون HTML آزاد. ادمین می‌تواند فوری مسدود کند."));
+    await sendText(env, chatId, t(lang, "No spam, phishing, malware, scams, or illegal content. https links only. No shorteners. No free HTML. Live pages are also listed on @Blinkboards until expiry. Admin can expire or block instantly.", "اسپم، فیشینگ، بدافزار، کلاهبرداری و محتوای غیرقانونی ممنوع. فقط لینک https. بدون کوتاه‌کننده. بدون HTML آزاد. صفحات زنده تا انقضا در @Blinkboards هم می‌آیند. ادمین می‌تواند فوری مسدود کند."));
     return { ok: true };
   }
   if (cmd === "/stats" || cmd === "/block" || cmd === "/expire") {
@@ -367,10 +370,20 @@ async function handlePaid(env, message, origin, lang) {
     chatId,
     t(
       lang,
-      `Live for ${plan ? plan.label : "a while"}.\n${url}\nIt turns off automatically.`,
-      `منتشر شد (${plan ? plan.label : ""}).\n${url}\nخودکار خاموش می‌شود.`
+      `Live for ${plan ? plan.label : "a while"}.\n${url}\nAlso posted on @Blinkboards until it expires.`,
+      `منتشر شد (${plan ? plan.label : ""}).\n${url}\nتا انقضا در @Blinkboards هم هست.`
     )
   );
+  if (page) {
+    await announceLive(env, {
+      code: row.code,
+      title: page.title,
+      body: page.body,
+      kind: page.kind,
+      planLabel: plan ? plan.label : "",
+      origin,
+    });
+  }
   return { ok: true };
 }
 
@@ -399,7 +412,8 @@ async function handleAdmin(env, message, lang) {
     return { ok: true };
   }
   if (cmd === "/expire") {
-    await updatePage(env.DB, code, { status: "expired", expires_at: Date.now() });
+    if (page.channel_msg_id) await dropChannelPost(env, page.channel_msg_id);
+    await updatePage(env.DB, code, { status: "expired", expires_at: Date.now(), channel_msg_id: null });
     if (page.image_key) {
       try { await env.MEDIA.delete(page.image_key); } catch {}
       await updatePage(env.DB, code, { image_key: null });
@@ -409,8 +423,9 @@ async function handleAdmin(env, message, lang) {
     return { ok: true };
   }
   if (cmd === "/block") {
+    if (page.channel_msg_id) await dropChannelPost(env, page.channel_msg_id);
     const reason = clip(parts.slice(2).join(" ") || "blocked", 200);
-    await updatePage(env.DB, code, { status: "blocked", blocked_at: Date.now(), block_reason: reason });
+    await updatePage(env.DB, code, { status: "blocked", blocked_at: Date.now(), block_reason: reason, channel_msg_id: null });
     await adminLog(env.DB, userId, "block", code, reason);
     await sendText(env, chatId, `Blocked ${code}`);
     return { ok: true };

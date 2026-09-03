@@ -1,10 +1,17 @@
-import { expireDue, listExpiredMedia, updatePage } from "./store.js";
+import { expireDue, listExpiredMedia, listLiveDue, updatePage } from "./store.js";
+import { dropChannelPost } from "./channel.js";
 
 export async function runExpiry(env) {
   const now = Date.now();
   await env.DB.prepare(
     "UPDATE pages SET status = 'expired' WHERE status = 'pending_pay' AND created_at <= ?"
   ).bind(now - 2 * 3600 * 1000).run();
+  const due = await listLiveDue(env.DB, now);
+  for (const row of due) {
+    if (row && row.channel_msg_id) {
+      try { await dropChannelPost(env, row.channel_msg_id); } catch {}
+    }
+  }
   const n = await expireDue(env.DB, now);
   const media = await listExpiredMedia(env.DB, now, 40);
   const rows = (media && media.results) || media || [];

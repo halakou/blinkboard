@@ -14,6 +14,8 @@ run_worker_first = true
 [vars]
 PUBLIC_ORIGIN = "https://blinkboard.pages.dev"
 BOT_USERNAME = "BlinkboardBot"
+CHANNEL_USERNAME = "Blinkboards"
+CHANNEL_ID = "-1003991653836"
 EUR_USD = "1.08"
 STAR_USD = "0.013"
 

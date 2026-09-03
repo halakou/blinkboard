@@ -80,6 +80,17 @@ export default {
       const page = await asset(env, request, path);
       if (page) return page;
     }
+    if (
+      request.method === "GET" &&
+      (path === "/logo.svg" ||
+        path === "/logo.png" ||
+        path === "/favicon.svg" ||
+        path === "/favicon-32.png" ||
+        path === "/apple-touch-icon.png")
+    ) {
+      const page = await asset(env, request, path, { cache: "public, max-age=86400" });
+      if (page) return page;
+    }
     if (request.method === "GET" && (path === "/app" || path === "/app/")) {
       const page = await asset(env, request, "/app/index.html", { cache: "no-store", csp: MINI_CSP });
       if (page) return page;

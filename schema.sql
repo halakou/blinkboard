@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS pages (
   blocked_at INTEGER,
   block_reason TEXT,
   views INTEGER NOT NULL DEFAULT 0,
-  invoice_payload TEXT
+  invoice_payload TEXT,
+  channel_msg_id INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_pages_status_exp ON pages(status, expires_at);

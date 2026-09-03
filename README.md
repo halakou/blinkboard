@@ -5,6 +5,7 @@ Telegram-first rented pages. No site accounts. Landing + public boards on Cloudf
 Public URL: `https://blinkboard.pages.dev`  
 Board URL: `https://blinkboard.pages.dev/a/XXXX`  
 Bot: [@BlinkboardBot](https://t.me/BlinkboardBot)  
+Live channel: [@Blinkboards](https://t.me/Blinkboards)  
 Worker origin (webhook): `https://blinkboard.halakou.workers.dev`
 
 ## What it does
@@ -16,7 +17,7 @@ A visitor talks only to the Telegram bot or its Mini App (menu button).
 3. Send headline, body, optional photo, optional `https` link  
 4. Content is moderated  
 5. Pay Telegram Stars  
-6. Page goes live at `/a/XXXX` until expiry, then it is switched off automatically  
+6. Page goes live at `/a/XXXX` **and** on [@Blinkboards](https://t.me/Blinkboards) until expiry; then both are switched off  
 
 The website is display-only. It does not take signups or payments.
 

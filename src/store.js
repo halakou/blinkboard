@@ -80,6 +80,13 @@ export async function markPaid(db, payload, chargeId, paidAt) {
   ).bind(chargeId, paidAt, payload).run();
 }
 
+export async function listLiveDue(db, now) {
+  const res = await db.prepare(
+    "SELECT code, channel_msg_id FROM pages WHERE status = 'live' AND expires_at IS NOT NULL AND expires_at <= ?"
+  ).bind(now).all();
+  return (res && res.results) || [];
+}
+
 export async function expireDue(db, now) {
   const res = await db.prepare(
     "UPDATE pages SET status = 'expired' WHERE status = 'live' AND expires_at IS NOT NULL AND expires_at <= ?"

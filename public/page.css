@@ -55,3 +55,4 @@ h1 {
 .url { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; color: var(--muted); word-break: break-all; }
 .by { text-align: center; padding: 12px 0 40px; color: var(--muted); }
 .by a { color: var(--ink); }
+.by img { vertical-align: middle; border-radius: 4px; }
