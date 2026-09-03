@@ -191,6 +191,10 @@ export default {
       const page = await asset(env, request, path, { cache: "public, max-age=86400" });
       if (page) return page;
     }
+    if (request.method === "GET" && /^\/google[a-z0-9]+\.html$/.test(path)) {
+      const page = await asset(env, request, path, { cache: "public, max-age=300" });
+      if (page) return page;
+    }
     if (request.method === "GET" && (path === "/app" || path === "/app/")) {
       const page = await asset(env, request, "/app/index.html", { cache: "no-store", csp: MINI_CSP });
       if (page) return page;
