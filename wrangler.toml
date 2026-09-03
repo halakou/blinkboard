@@ -13,7 +13,7 @@ run_worker_first = true
 
 [vars]
 PUBLIC_ORIGIN = "https://blinkboard.pages.dev"
-BOT_USERNAME = ""
+BOT_USERNAME = "BlinkboardBot"
 EUR_USD = "1.08"
 STAR_USD = "0.013"
 

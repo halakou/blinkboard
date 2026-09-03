@@ -4,6 +4,7 @@ Telegram-first rented pages. No site accounts. Landing + public boards on Cloudf
 
 Public URL: `https://blinkboard.pages.dev`  
 Board URL: `https://blinkboard.pages.dev/a/XXXX`  
+Bot: [@BlinkboardBot](https://t.me/BlinkboardBot)  
 Worker origin (webhook): `https://blinkboard.halakou.workers.dev`
 
 ## What it does
