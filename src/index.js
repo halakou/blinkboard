@@ -11,7 +11,7 @@ import { handleAdminApi } from "./admin.js";
 import { handleReport } from "./report.js";
 import { listLivePublic } from "./store.js";
 import {
-  isWorkersDev, robotsTxt, sitemapXml, llmsTxt, llmsFull, openApiSpec, agentCard, rssFeed,
+  isWorkersDev, robotsTxt, sitemapXml, llmsTxt, llmsFull, openApiSpec, agentCard, rssFeed, securityTxt, jsonLd,
 } from "./discover.js";
 import { planOverrides } from "./rent.js";
 import { listPlans } from "./pricing.js";
@@ -99,6 +99,12 @@ export default {
     if (request.method === "GET" && path === "/health") {
       return json({ ok: true, service: "blinkboard" }, 200, request);
     }
+    if (request.method === "GET" && (path === "/.well-known/security.txt" || path === "/security.txt")) {
+      return text(securityTxt(origin), "text/plain; charset=utf-8", request, "public, max-age=300");
+    }
+    if (request.method === "GET" && path === "/schema.json") {
+      return text(JSON.stringify(jsonLd(origin)), "application/ld+json; charset=utf-8", request, "public, max-age=300");
+    }
     if (request.method === "GET" && path === "/robots.txt") {
       const body = isWorkersDev(request) ? "User-agent: *\nDisallow: /\n" : robotsTxt(origin);
       return text(body, "text/plain; charset=utf-8", request, "public, max-age=300");
@@ -178,6 +184,7 @@ export default {
       (path === "/logo.svg" ||
         path === "/logo.png" ||
         path === "/favicon.svg" ||
+        path === "/favicon.ico" ||
         path === "/favicon-32.png" ||
         path === "/apple-touch-icon.png")
     ) {

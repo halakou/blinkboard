@@ -12,6 +12,17 @@ export function isWorkersDev(request, env) {
   return publicHost(request, env).endsWith("workers.dev");
 }
 
+export function securityTxt(origin) {
+  const o = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
+  return `Contact: https://t.me/BlinkboardBot
+Contact: https://t.me/BlinkboardBot?start=support
+Expires: 2027-08-01T00:00:00.000Z
+Preferred-Languages: en, fa
+Canonical: ${o}/.well-known/security.txt
+Policy: ${o}/rules
+`;
+}
+
 export function robotsTxt(publicSite) {
   if (!publicSite) {
     return "User-agent: *\nDisallow: /\n";

@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.1.1
+
+- `/favicon.ico` for browsers that still request the ICO path
+- RFC 9116 `/.well-known/security.txt` (and `/security.txt`)
+- JSON-LD at `/schema.json` linked from public HTML
+- GitHub `SECURITY.md` for private reports via `/support`
+
 ## v2.1.0
 
 - Mini App cover photos upload to Telegram (`sendPhoto` → `file_id`), not cloud object storage

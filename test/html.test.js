@@ -32,4 +32,6 @@ test("sample index lists four themes", () => {
   assert.ok(html.includes("/preview/eightbit"));
   assert.ok(html.includes("/preview/midnight"));
   assert.ok(html.includes("/preview/poster"));
+  assert.ok(html.includes("/favicon.ico"));
+  assert.ok(html.includes("/schema.json"));
 });

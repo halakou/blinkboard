@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { robotsTxt, sitemapXml, llmsTxt, openApiSpec } from "../src/discover.js";
+import { robotsTxt, sitemapXml, llmsTxt, openApiSpec, securityTxt, jsonLd } from "../src/discover.js";
 import { pageMarkdown } from "../src/html.js";
 
 test("robots and sitemap point at public origin", () => {
@@ -24,4 +24,18 @@ test("llms.txt and openapi mention live API", () => {
 test("markdown pages exist", () => {
   assert.ok(pageMarkdown("how").startsWith("# "));
   assert.ok(pageMarkdown("faq").includes("Stars"));
+});
+
+test("security.txt has contact and expiry", () => {
+  const s = securityTxt("https://blinkboard.pages.dev");
+  assert.ok(s.includes("Contact: https://t.me/BlinkboardBot"));
+  assert.ok(s.includes("Expires: "));
+  assert.ok(s.includes("Canonical: https://blinkboard.pages.dev/.well-known/security.txt"));
+  assert.ok(s.includes("Policy: https://blinkboard.pages.dev/rules"));
+});
+
+test("json-ld names the product", () => {
+  const j = jsonLd("https://blinkboard.pages.dev");
+  assert.equal(j["@context"], "https://schema.org");
+  assert.ok(j["@graph"].some((n) => n["@type"] === "SoftwareApplication" && n.name === "Blinkboard"));
 });

@@ -20,8 +20,10 @@ function layout({ title, body, extraCss = "", origin, description = "", path = "
 <meta property="og:url" content="${escapeAttr(url)}"/>
 <meta property="og:image" content="${escapeAttr(o + "/logo.png")}"/>
 <meta name="twitter:card" content="summary"/>
+<link rel="icon" href="/favicon.ico" sizes="32x32"/>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+<link rel="alternate" type="application/ld+json" href="/schema.json"/>
 <link rel="alternate" type="text/markdown" href="${escapeAttr(path === "/" ? "/llms.txt" : path + ".md")}"/>
 <title>${escapeHtml(title)}</title>
 <link rel="stylesheet" href="/landing.css?v=5"/>
