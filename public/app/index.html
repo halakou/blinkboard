@@ -7,13 +7,13 @@
   <meta name="robots" content="noindex"/>
   <title>Blinkboard Mini App</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
-  <link rel="stylesheet" href="/app/app.css?v=6"/>
+  <link rel="stylesheet" href="/app/app.css?v=7"/>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <header class="bar">
     <span class="word"><span class="live-dot"></span> Create Board</span>
-    <span class="kicker">v2.0</span>
+    <span class="kicker">v2.1</span>
   </header>
   <main>
     <p id="status" class="status" hidden></p>
@@ -32,7 +32,8 @@
 
     <section class="card">
       <p class="lab">Cover image (optional)</p>
-      <button type="button" class="upload" id="photo-zone">Tap to add photo — sent in the chat bot for now</button>
+      <input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp" hidden/>
+      <button type="button" class="upload" id="photo-zone">Tap to add photo — stored in Telegram</button>
     </section>
 
     <section class="card">
@@ -66,6 +67,6 @@
   <div class="dock">
     <button type="button" id="pay" class="go">Pay Stars</button>
   </div>
-  <script src="/app/app.js?v=6"></script>
+  <script src="/app/app.js?v=7"></script>
 </body>
 </html>

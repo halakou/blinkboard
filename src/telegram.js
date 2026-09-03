@@ -1,12 +1,35 @@
 const API = "https://api.telegram.org";
 
+export function sniffImage(bytes) {
+  const buf = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
+  if (buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return { mime: "image/jpeg", ext: "jpg" };
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return { mime: "image/png", ext: "png" };
+  if (
+    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+  ) return { mime: "image/webp", ext: "webp" };
+  return null;
+}
+
+export function photoFileIdFromMessage(msg) {
+  const photos = msg && msg.photo;
+  if (Array.isArray(photos) && photos.length) {
+    const best = photos[photos.length - 1];
+    if (best && best.file_id) return String(best.file_id);
+  }
+  if (msg && msg.document && msg.document.file_id) return String(msg.document.file_id);
+  return "";
+}
+
 export async function tgCall(env, method, body) {
   const token = env.BOT_TOKEN;
   if (!token) return { ok: false, description: "no_token" };
+  const form = typeof FormData !== "undefined" && body instanceof FormData;
   const res = await fetch(`${API}/bot${token}/${method}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body || {}),
+    headers: form ? undefined : { "content-type": "application/json" },
+    body: form ? body : JSON.stringify(body || {}),
   });
   try {
     return await res.json();
@@ -72,6 +95,21 @@ export function invoiceUrlFrom(link) {
   if (typeof raw === "string" && raw) return raw;
   if (raw && typeof raw.url === "string" && raw.url) return raw.url;
   return null;
+}
+
+export async function storePhotoInTelegram(env, chatId, bytes, filename, mime) {
+  if (!chatId) return "";
+  const kind = sniffImage(bytes);
+  if (!kind) return "";
+  const buf = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  if (buf.byteLength < 32 || buf.byteLength > 2_500_000) return "";
+  const form = new FormData();
+  form.append("chat_id", String(chatId));
+  form.append("disable_notification", "true");
+  form.append("caption", "Cover stored in Telegram.");
+  form.append("photo", new Blob([buf], { type: mime || kind.mime }), filename || `cover.${kind.ext}`);
+  const data = await tgCall(env, "sendPhoto", form);
+  return data && data.ok ? photoFileIdFromMessage(data.result) : "";
 }
 
 export async function downloadTelegramFile(env, fileId) {

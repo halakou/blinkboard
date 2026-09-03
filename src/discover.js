@@ -50,7 +50,7 @@ Sitemap: ${publicSite}/sitemap.xml
 
 export function sitemapXml(origin) {
   const o = origin.replace(/\/$/, "");
-  const paths = ["/", "/how", "/pricing", "/faq", "/rules", "/terms", "/privacy", "/llms.txt"];
+  const paths = ["/", "/preview", "/how", "/pricing", "/faq", "/rules", "/terms", "/privacy", "/llms.txt"];
   const urls = paths
     .map(
       (p) =>
@@ -75,6 +75,7 @@ Mini App: ${o}/app
 ## For people
 
 - [Home](${o}/): product
+- [Theme samples](${o}/preview): Classic, 8-bit, Midnight, Poster
 - [How it works](${o}/how): flow
 - [Pricing](${o}/pricing): durations
 - [FAQ](${o}/faq)

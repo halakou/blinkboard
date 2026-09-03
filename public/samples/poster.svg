@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="One night only">
+  <rect width="960" height="540" fill="#111111"/>
+  <rect x="48" y="48" width="864" height="444" fill="none" stroke="#ff4d1c" stroke-width="14"/>
+  <text x="480" y="230" text-anchor="middle" font-family="Georgia, serif" font-size="72" fill="#ff4d1c">ONE NIGHT</text>
+  <text x="480" y="310" text-anchor="middle" font-family="Georgia, serif" font-size="48" fill="#fff7ed">ONLY</text>
+  <text x="480" y="390" text-anchor="middle" font-family="ui-sans-serif, Segoe UI, sans-serif" font-size="20" fill="#fb923c">WAREHOUSE 4 · DOORS 9PM</text>
+</svg>

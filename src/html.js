@@ -1,6 +1,6 @@
 import { escapeHtml, escapeAttr } from "./escape.js";
 import { formatEur, listPlans } from "./pricing.js";
-import { normalizeTheme, themeHref, SAMPLE_PAGE } from "./themes.js";
+import { normalizeTheme, themeHref, THEMES, samplePage } from "./themes.js";
 
 function layout({ title, body, extraCss = "", origin, description = "", path = "/" }) {
   const o = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
@@ -24,7 +24,7 @@ function layout({ title, body, extraCss = "", origin, description = "", path = "
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 <link rel="alternate" type="text/markdown" href="${escapeAttr(path === "/" ? "/llms.txt" : path + ".md")}"/>
 <title>${escapeHtml(title)}</title>
-<link rel="stylesheet" href="/landing.css?v=4"/>
+<link rel="stylesheet" href="/landing.css?v=5"/>
 ${extraCss}
 </head>
 <body>
@@ -37,6 +37,7 @@ ${body}
   <a href="/">Home</a>
   <a href="https://t.me/BlinkboardBot">Bot</a>
   <a href="https://t.me/Blinkboards">Live channel</a>
+  <a href="/preview">Samples</a>
   <a href="/how">How</a>
   <a href="/pricing">Pricing</a>
   <a href="/faq">FAQ</a>
@@ -55,7 +56,7 @@ const COPY = {
     description: "Rent a public page from Telegram, pay Stars, get /a/XXXX until it expires.",
     md: "Open @BlinkboardBot or the Mini App. Pick 1h–7d. Send headline, text, optional https link. Pay Telegram Stars. The page goes live at /a/XXXX and on @Blinkboards until the clock ends.",
     html: `<main class="prose"><h1>How it works</h1>
-<ol><li>Open the Telegram bot or Mini App.</li><li>Pick a duration and a type (promo, notice, link).</li><li>Send a headline, text, optional photo (chat) and https link.</li><li>We moderate spam, phishing, malware, and scams.</li><li>Pay Stars. Nothing is public until Telegram confirms.</li><li>Share <code>/a/XXXX</code>. It also appears on @Blinkboards. When time is up, both vanish.</li></ol>
+<ol><li>Open the Telegram bot or Mini App.</li><li>Pick a duration and a type (promo, notice, link).</li><li>Send a headline, text, optional photo (Mini App or chat) and https link.</li><li>We moderate spam, phishing, malware, and scams.</li><li>Pay Stars. Nothing is public until Telegram confirms.</li><li>Share <code>/a/XXXX</code>. It also appears on @Blinkboards. When time is up, both vanish.</li></ol>
 <p><a class="go" href="/go">Start in Telegram</a></p></main>`,
   },
   pricing: {
@@ -102,7 +103,7 @@ const COPY = {
     description: "No site accounts. Telegram user id, page content, payment reference, view counts.",
     md: "No site accounts. We store Telegram user id, page content, payment reference, and view counts. Live pages may appear on @Blinkboards. We do not sell personal data.",
     html: `<main class="prose"><h1>Privacy</h1>
-<p>No site accounts. We store your Telegram user id, page content, payment reference, and aggregate view counts. Live pages may appear on @Blinkboards until expiry. Images live until expiry. We do not sell personal data. Webhook traffic is authenticated with a secret token. Agents hitting public JSON do not receive owner ids.</p></main>`,
+<p>No site accounts. We store your Telegram user id, page content, payment reference, and aggregate view counts. Live pages may appear on @Blinkboards until expiry. Photos stay in Telegram (file_id) until the page expires. We do not sell personal data. Webhook traffic is authenticated with a secret token. Agents hitting public JSON do not receive owner ids.</p></main>`,
   },
 };
 
@@ -131,14 +132,27 @@ export function renderGone(status = "expired") {
   });
 }
 
+function boardImage(page) {
+  const src = String(page.image_src || "");
+  if (/^\/samples\/[a-z0-9._-]+\.(?:svg|jpe?g|png|webp)$/i.test(src)) {
+    return `<img class="hero" src="${escapeAttr(src)}" alt=""/>`;
+  }
+  if (page.image_key) {
+    return `<img class="hero" src="/m/${encodeURIComponent(page.code)}" alt=""/>`;
+  }
+  return "";
+}
+
 export function renderBoard(page, origin) {
-  const url = `${origin}/a/${page.code}`;
+  const o = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
+  const url = page.page_url || `${o}/a/${page.code}`;
   const theme = normalizeTheme(page.theme);
-  const img = page.image_key ? `<img class="hero" src="/m/${encodeURIComponent(page.code)}" alt=""/>` : "";
+  const img = boardImage(page);
   const cta = page.cta_url
     ? `<a class="cta" rel="nofollow noopener noreferrer" href="${escapeAttr(page.cta_url)}">Open link</a>`
     : "";
-  const qr = `<img class="qr" src="/q/${encodeURIComponent(page.code)}.svg" width="160" height="160" alt="QR code for this page"/>`;
+  const qrSrc = page.qr_src || `/q/${encodeURIComponent(page.code)}.svg`;
+  const qr = `<img class="qr" src="${escapeAttr(qrSrc)}" width="160" height="160" alt="QR code for this page"/>`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -171,13 +185,35 @@ export function renderBoard(page, origin) {
 
 export function renderPreview(theme, origin) {
   const t = normalizeTheme(theme);
+  const o = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
   return renderBoard({
-    ...SAMPLE_PAGE,
-    theme: t,
-    code: "GAME",
+    ...samplePage(t),
     expires_at: Date.now() + 6 * 3600 * 1000,
     image_key: null,
-  }, origin);
+    image_src: `/samples/${t}.svg`,
+    page_url: `${o}/preview/${t}`,
+    qr_src: `/q/preview/${t}.svg`,
+  }, o);
+}
+
+export function renderSampleIndex(origin) {
+  const cards = THEMES.map((th) => {
+    const s = samplePage(th.id);
+    return `<a class="sample-card" href="/preview/${escapeAttr(th.id)}">
+      <img src="/samples/${escapeAttr(th.id)}.svg" alt=""/>
+      <strong>${escapeHtml(th.label)}</strong>
+      <span>${escapeHtml(s.title)}</span>
+    </a>`;
+  }).join("");
+  return layout({
+    title: "Theme samples — Blinkboard",
+    origin,
+    path: "/preview",
+    description: "Full Classic, 8-bit, Midnight, and Poster boards with photo, countdown, QR, and CTA.",
+    body: `<main class="sample-lead"><h1>Full theme samples</h1>
+<p>Same board a renter gets — photo, countdown, QR, link.</p>
+<div class="samples">${cards}</div></main>`,
+  });
 }
 
 export function pricingNote(overrides) {

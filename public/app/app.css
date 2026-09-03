@@ -66,6 +66,8 @@ input:focus, textarea:focus { outline: none; border-color: var(--blue); }
   width: 100%; border: 2px dashed var(--border); border-radius: 8px; background: transparent;
   color: var(--muted); padding: 22px 12px; cursor: pointer; font: inherit;
 }
+.upload img { max-height: 120px; max-width: 100%; border-radius: 6px; display: block; margin: 0 auto 8px; }
+.upload.has-photo { border-style: solid; color: var(--text); }
 .hint { color: var(--muted); font-size: 12px; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .status { padding: 10px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; }

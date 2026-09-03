@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { renderBoard } from "../src/html.js";
+import { renderBoard, renderPreview, renderSampleIndex } from "../src/html.js";
 
 test("board HTML escapes user title and body", () => {
   const html = renderBoard({
@@ -16,4 +16,20 @@ test("board HTML escapes user title and body", () => {
   assert.ok(html.includes("&lt;img"));
   assert.ok(html.includes("https://example.com/a"));
   assert.ok(html.includes("/a/A2B3"));
+});
+
+test("preview includes sample image and qr", () => {
+  const html = renderPreview("poster", "https://blinkboard.pages.dev");
+  assert.ok(html.includes("/samples/poster.svg"));
+  assert.ok(html.includes("/q/preview/poster.svg"));
+  assert.ok(html.includes("ONE NIGHT ONLY"));
+  assert.equal(html.includes("/m/"), false);
+});
+
+test("sample index lists four themes", () => {
+  const html = renderSampleIndex("https://blinkboard.pages.dev");
+  assert.ok(html.includes("/preview/classic"));
+  assert.ok(html.includes("/preview/eightbit"));
+  assert.ok(html.includes("/preview/midnight"));
+  assert.ok(html.includes("/preview/poster"));
 });

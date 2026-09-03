@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="Sunday market breakfast">
+  <rect width="960" height="540" fill="#f6f1e8"/>
+  <rect x="0" y="390" width="960" height="150" fill="#e8dcc8"/>
+  <circle cx="760" cy="110" r="54" fill="#f0d9a8"/>
+  <rect x="90" y="210" width="280" height="170" rx="10" fill="#fff8ee" stroke="#c4b8a5"/>
+  <rect x="130" y="250" width="200" height="18" fill="#d9c7ad"/>
+  <rect x="130" y="282" width="150" height="12" fill="#eadcc8"/>
+  <rect x="420" y="200" width="220" height="190" rx="110" fill="#f3e6d2" stroke="#c4b8a5"/>
+  <ellipse cx="530" cy="290" rx="70" ry="40" fill="#f7c97b"/>
+  <text x="90" y="80" font-family="Georgia, serif" font-size="36" fill="#3b2f22">Sunday market</text>
+  <text x="90" y="126" font-family="Georgia, serif" font-size="22" fill="#7a6a55">breakfast from 8am</text>
+</svg>

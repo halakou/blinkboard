@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="Roof bar after midnight">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#020617"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#sky)"/>
+  <circle cx="820" cy="90" r="18" fill="#67e8f9"/>
+  <rect x="180" y="250" width="600" height="180" fill="#111827"/>
+  <rect x="220" y="280" width="80" height="120" fill="#164e63"/>
+  <rect x="340" y="280" width="80" height="120" fill="#155e75"/>
+  <rect x="460" y="280" width="80" height="120" fill="#0e7490"/>
+  <rect x="580" y="280" width="80" height="120" fill="#22d3ee"/>
+  <rect x="160" y="430" width="640" height="18" fill="#67e8f9"/>
+  <text x="80" y="80" font-family="ui-sans-serif, Segoe UI, sans-serif" font-size="32" fill="#e2e8f0">Roof bar</text>
+  <text x="80" y="122" font-family="ui-sans-serif, Segoe UI, sans-serif" font-size="20" fill="#67e8f9">after midnight</text>
+</svg>

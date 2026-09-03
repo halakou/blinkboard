@@ -3,7 +3,6 @@ import { getPlan, PRIVATE_STARS } from "./pricing.js";
 import { moderatePage } from "./moderate.js";
 import { clip, rateWindow, LIMITS } from "./security.js";
 import { getPage, insertPage, insertPayment, putSession, hitRate } from "./store.js";
-import { downloadTelegramFile } from "./telegram.js";
 import { normalizeTheme } from "./themes.js";
 
 export function planOverrides(env) {
@@ -51,18 +50,9 @@ export async function createPendingRent(env, { userId, kind, title, body, ctaUrl
   const stars = plan.stars + (isPrivate ? PRIVATE_STARS : 0);
   const code = await uniqueCode(env.DB);
   let imageKey = null;
-  if (imageBytes && imageBytes.byteLength >= 32 && env.MEDIA) {
-    imageKey = `${code}.jpg`;
-    await env.MEDIA.put(imageKey, imageBytes, { httpMetadata: { contentType: imageType || "image/jpeg" } });
-  } else if (imageFileId) {
-    if (env.MEDIA) {
-      const file = await downloadTelegramFile(env, imageFileId);
-      if (!file.ok) return { ok: false, error: "photo", status: 400 };
-      imageKey = `${code}.jpg`;
-      await env.MEDIA.put(imageKey, file.bytes, { httpMetadata: { contentType: file.type } });
-    } else {
-      imageKey = `tg:${imageFileId}`;
-    }
+  const fid = typeof imageFileId === "string" ? imageFileId.trim() : "";
+  if (fid && fid.length >= 8 && fid.length <= 200 && !fid.includes("\n")) {
+    imageKey = `tg:${fid}`;
   }
   const payload = clip(`bb:${code}:${plan.id}:${owner}`, 128);
   const now = Date.now();

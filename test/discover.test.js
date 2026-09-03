@@ -8,6 +8,7 @@ test("robots and sitemap point at public origin", () => {
   assert.ok(r.includes("Sitemap: https://blinkboard.pages.dev/sitemap.xml"));
   assert.ok(r.includes("Disallow: /admin"));
   const s = sitemapXml("https://blinkboard.pages.dev");
+  assert.ok(s.includes("/preview"));
   assert.ok(s.includes("/how"));
   assert.ok(s.includes("/faq"));
 });

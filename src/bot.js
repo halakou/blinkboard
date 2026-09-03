@@ -220,15 +220,19 @@ async function handleMessage(env, message, origin) {
       return { ok: true };
     }
     const photo = Array.isArray(message.photo) ? message.photo[message.photo.length - 1] : null;
-    if (!photo || !photo.file_id) {
+    const doc = message.document;
+    const imageDoc = doc && /^image\/(jpeg|png|webp)$/i.test(String(doc.mime_type || "")) ? doc : null;
+    const fileId = (photo && photo.file_id) || (imageDoc && imageDoc.file_id) || "";
+    const fileSize = (photo && photo.file_size) || (imageDoc && imageDoc.file_size) || 0;
+    if (!fileId) {
       await sendText(env, chatId, t(lang, "Send a photo, or /skip.", "یک عکس بفرست، یا /skip."));
       return { ok: true };
     }
-    if (photo.file_size && photo.file_size > 2_500_000) {
+    if (fileSize > 2_500_000) {
       await sendText(env, chatId, t(lang, "Photo is too large (2.5 MB max).", "عکس بزرگ است."));
       return { ok: true };
     }
-    ses.data.imageFileId = photo.file_id;
+    ses.data.imageFileId = fileId;
     await putSession(env.DB, userId, "url", ses.data);
     await sendText(env, chatId, t(lang, "Optional https link, or /skip.", "لینک https اختیاری، یا /skip."));
     return { ok: true };

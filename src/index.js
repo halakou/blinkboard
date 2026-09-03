@@ -1,12 +1,12 @@
 import { normalizeCode } from "./codes.js";
 import { secretsEqual } from "./security.js";
 import { handleUpdate, publicPage } from "./bot.js";
-import { renderBoard, renderGone, renderLegal, pageMarkdown, renderPreview } from "./html.js";
+import { renderBoard, renderGone, renderLegal, pageMarkdown, renderPreview, renderSampleIndex } from "./html.js";
 import { qrSvg } from "./qr.js";
 import { runExpiry } from "./cron.js";
 import { downloadTelegramFile } from "./telegram.js";
 import { getPage } from "./store.js";
-import { publicPlans, handleRentApi, handleMineApi } from "./mini.js";
+import { publicPlans, handleRentApi, handleMineApi, handlePhotoApi } from "./mini.js";
 import { handleAdminApi } from "./admin.js";
 import { handleReport } from "./report.js";
 import { listLivePublic } from "./store.js";
@@ -27,7 +27,7 @@ const SECURITY = {
 };
 
 const MINI_CSP =
-  "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://telegram.org; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors https://web.telegram.org https://telegram.org 'self'";
+  "default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self' https://telegram.org; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors https://web.telegram.org https://telegram.org 'self'";
 
 function hostHeaders(request) {
   if (isWorkersDev(request)) return { "X-Robots-Tag": "noindex, nofollow" };
@@ -159,9 +159,19 @@ export default {
       const page = await asset(env, request, `/themes/${id}.css`, { cache: "public, max-age=3600" });
       if (page) return page;
     }
+    if (request.method === "GET" && (path === "/preview" || path === "/preview/")) {
+      return html(renderSampleIndex(origin), 200, { cache: "public, max-age=120" }, request);
+    }
     const prev = path.match(/^\/preview\/([a-z]+)$/);
     if (request.method === "GET" && prev) {
       return html(renderPreview(prev[1], origin), 200, { cache: "no-store" }, request);
+    }
+    if (request.method === "GET" && path.startsWith("/samples/")) {
+      if (!/^\/samples\/[a-z0-9._-]+\.(?:svg|png|jpe?g|webp)$/i.test(path)) {
+        return new Response("Not found", { status: 404, headers: SECURITY });
+      }
+      const page = await asset(env, request, path, { cache: "public, max-age=86400" });
+      if (page) return page;
     }
     if (
       request.method === "GET" &&
@@ -201,6 +211,10 @@ export default {
       const res = await handleAdminApi(env, request);
       return json(res.body, res.status, request);
     }
+    if (request.method === "POST" && path === "/api/photo") {
+      const res = await handlePhotoApi(env, request);
+      return json(res.body, res.status, request);
+    }
     if (request.method === "POST" && path === "/api/mine") {
       const res = await handleMineApi(env, request, origin);
       return json(res.body, res.status, request);
@@ -220,6 +234,19 @@ export default {
       return html(renderGone("blocked"), 404, {}, request);
     }
 
+    const qprev = path.match(/^\/q\/preview\/([a-z]+)\.svg$/);
+    if (request.method === "GET" && qprev) {
+      const t = normalizeTheme(qprev[1]);
+      const svg = qrSvg(`${origin}/preview/${t}`);
+      return new Response(svg, {
+        headers: {
+          "content-type": "image/svg+xml; charset=utf-8",
+          "cache-control": "public, max-age=3600",
+          ...SECURITY,
+          ...hostHeaders(request),
+        },
+      });
+    }
     const qr = path.match(/^\/q\/([A-Za-z0-9]+)\.svg$/);
     if (request.method === "GET" && qr) {
       const code = normalizeCode(qr[1]);

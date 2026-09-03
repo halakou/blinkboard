@@ -28,5 +28,7 @@ test("board links a theme stylesheet and escapes", () => {
 test("preview uses sample copy", () => {
   const html = renderPreview("poster", "https://blinkboard.pages.dev");
   assert.ok(html.includes("theme-poster"));
-  assert.ok(html.includes("Neon Dumpling"));
+  assert.ok(html.includes("ONE NIGHT ONLY"));
+  const eight = renderPreview("eightbit", "https://blinkboard.pages.dev");
+  assert.ok(eight.includes("Neon Dumpling"));
 });

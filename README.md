@@ -21,6 +21,13 @@ A visitor talks only to the Telegram bot or its Mini App (menu button).
 
 The website is display-only. It does not take signups or payments.
 
+## Versions
+
+- **v1** — Telegram bot rents a page: Stars invoice, `/a/XXXX`, four locked themes, channel @Blinkboards, expiry cron.
+- **v2** — Mini App create + pay, admin Mini App, Telegram `file_id` photo store (no R2), full theme samples at `/preview`.
+
+Git tags: `v1.0.0`, `v2.0.0`, `v2.1.0` (this photo + samples drop).
+
 ## Payment (v1)
 
 **Telegram Stars (`XTR`)** is the only processor.

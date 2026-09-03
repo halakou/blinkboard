@@ -92,6 +92,9 @@
     if (err === "invoice") return "Could not open Stars pay. Use the chat bot.";
     if (err === "json") return "Could not read that form.";
     if (err === "open_chat") return "Open this Mini App from @BlinkboardBot.";
+    if (err === "photo_type") return "JPEG, PNG, or WebP only.";
+    if (err === "photo_size") return "Photo is too large (2.5 MB max).";
+    if (err === "photo_store" || err === "photo") return "Could not store photo in Telegram. Try again.";
     return null;
   }
 
@@ -197,10 +200,58 @@
 
   payBtn.addEventListener("click", pay);
   var zone = document.getElementById("photo-zone");
-  if (zone) {
-    zone.addEventListener("click", function () {
-      if (tg && tg.showAlert) tg.showAlert("Send the photo in the Blinkboard chat. Cloud image storage is not enabled on this account yet.");
-      else show("Send the photo in the Blinkboard chat.", true);
+  var photoInput = document.getElementById("photo-file");
+  var photoUrl = "";
+  function setPhotoPreview(file, label) {
+    if (photoUrl) {
+      try { URL.revokeObjectURL(photoUrl); } catch (e) {}
+      photoUrl = "";
+    }
+    zone.className = "upload has-photo";
+    zone.innerHTML = "";
+    if (file) {
+      photoUrl = URL.createObjectURL(file);
+      var img = document.createElement("img");
+      img.src = photoUrl;
+      img.alt = "";
+      zone.appendChild(img);
+    }
+    var cap = document.createElement("span");
+    cap.textContent = label;
+    zone.appendChild(cap);
+  }
+  if (zone && photoInput) {
+    zone.addEventListener("click", function () { photoInput.click(); });
+    photoInput.addEventListener("change", function () {
+      var file = photoInput.files && photoInput.files[0];
+      if (!file) return;
+      if (file.size > 2500000) {
+        show("Photo is too large (2.5 MB max).", true);
+        return;
+      }
+      setPhotoPreview(file, "Saving in Telegram…");
+      show("Saving photo in Telegram…");
+      var fd = new FormData();
+      fd.append("initData", (tg && tg.initData) || "");
+      fd.append("photo", file, file.name || "cover.jpg");
+      fetch("/api/photo", { method: "POST", body: fd })
+        .then(function (r) { return r.json().then(function (d) { return { r: r, d: d }; }); })
+        .then(function (x) {
+          var d = x.d || {};
+          if (d.ok) {
+            setPhotoPreview(file, "Cover saved in Telegram");
+            show("Cover saved in Telegram.");
+            return;
+          }
+          show(friendly(d.error) || "Could not store photo in Telegram.", true);
+          zone.className = "upload";
+          zone.textContent = "Tap to add photo";
+        })
+        .catch(function () {
+          show("Could not store photo in Telegram.", true);
+          zone.className = "upload";
+          zone.textContent = "Tap to add photo";
+        });
     });
   }
 

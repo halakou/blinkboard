@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="Neon Dumpling">
+  <rect width="960" height="540" fill="#0d1117"/>
+  <rect x="40" y="40" width="880" height="460" fill="none" stroke="#4ade80" stroke-width="8"/>
+  <rect x="360" y="170" width="240" height="160" fill="#166534"/>
+  <rect x="400" y="150" width="160" height="40" fill="#4ade80"/>
+  <rect x="420" y="210" width="40" height="40" fill="#bbf7d0"/>
+  <rect x="500" y="210" width="40" height="40" fill="#bbf7d0"/>
+  <rect x="440" y="270" width="80" height="24" fill="#14532d"/>
+  <text x="480" y="100" text-anchor="middle" font-family="ui-monospace, Consolas, monospace" font-size="28" fill="#4ade80">NEON DUMPLING</text>
+  <text x="480" y="430" text-anchor="middle" font-family="ui-monospace, Consolas, monospace" font-size="18" fill="#86efac">TONIGHT ONLY // 1AM</text>
+</svg>

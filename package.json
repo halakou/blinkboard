@@ -1,9 +1,9 @@
 {
   "name": "blinkboard",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.1.0",
   "type": "module",
-  "description": "Telegram-first rented pages. No accounts. Cloudflare Workers + D1 + R2.",
+  "description": "Telegram-first rented pages. No accounts. Cloudflare Workers + D1. Photos stored as Telegram file_id.",
   "scripts": {
     "test": "node --test test/*.test.js",
     "deploy": "npx wrangler deploy",
