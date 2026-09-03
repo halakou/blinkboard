@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.1.2
+
+- IndexNow key at site root so Bing (and other engines) can be notified of URL changes without the Webmaster UI
+
 ## v2.1.1
 
 - `/favicon.ico` for browsers that still request the ICO path
