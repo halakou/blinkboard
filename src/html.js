@@ -24,7 +24,7 @@ function layout({ title, body, extraCss = "", origin, description = "", path = "
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 <link rel="alternate" type="text/markdown" href="${escapeAttr(path === "/" ? "/llms.txt" : path + ".md")}"/>
 <title>${escapeHtml(title)}</title>
-<link rel="stylesheet" href="/landing.css"/>
+<link rel="stylesheet" href="/landing.css?v=2"/>
 ${extraCss}
 </head>
 <body>

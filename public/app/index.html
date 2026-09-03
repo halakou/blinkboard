@@ -3,22 +3,28 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="theme-color" content="#f6f1e8"/>
+  <meta name="theme-color" content="#0d1117"/>
+  <meta name="robots" content="noindex"/>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
   <title>Blinkboard</title>
-  <link rel="stylesheet" href="/app/app.css"/>
+  <link rel="stylesheet" href="/app/app.css?v=3"/>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <header class="bar">
     <span class="word"><img src="/logo.svg" width="22" height="22" alt=""/> Blinkboard</span>
-    <span class="kicker">rent a page</span>
+    <a class="quiet" href="/preview/eightbit" id="sample">Sample</a>
   </header>
   <main>
-    <p class="lede">Write a public page here. Pay Stars. Get <code>/a/XXXX</code>. It also posts to <a href="https://t.me/Blinkboards" target="_blank" rel="noopener">@Blinkboards</a> until the clock ends.</p>
     <p id="status" class="status" hidden></p>
 
-    <h2>How long</h2>
+    <div class="stage" id="stage" data-theme="eightbit">
+      <p class="stage-kicker"><span id="pv-kind">promo</span> · <span id="pv-plan">24 hours</span></p>
+      <h2 id="pv-title">Your headline</h2>
+      <p id="pv-body">The page text appears here as you type.</p>
+    </div>
+
+    <h2>Duration</h2>
     <div id="plans" class="row"></div>
 
     <h2>Look</h2>
@@ -31,18 +37,24 @@
       <button type="button" class="chip kind" data-kind="link">Link</button>
     </div>
 
-    <label>Headline
-      <input id="title" maxlength="80" autocomplete="off"/>
+    <label>Headline <span class="count" id="title-n">0/80</span>
+      <input id="title" maxlength="80" autocomplete="off" placeholder="Tonight only"/>
     </label>
-    <label>Text
-      <textarea id="body" maxlength="600" rows="5"></textarea>
+    <label>Text <span class="count" id="body-n">0/600</span>
+      <textarea id="body" maxlength="600" rows="4" placeholder="What should people see?"></textarea>
     </label>
-    <label>https link (optional, required for Link)
+    <label>https link <span class="hint-inline" id="cta-need">(optional)</span>
       <input id="cta" maxlength="2048" inputmode="url" placeholder="https://"/>
     </label>
+
     <button type="button" id="pay" class="go">Pay with Stars</button>
-    <p class="hint">Photo is optional in the chat bot if you need one. After pay, the live URL is also sent in chat.</p>
+    <p class="hint">Photo: send it in the chat bot. Live URL also arrives in chat. Channel: @Blinkboards</p>
+
+    <section id="mine-wrap" hidden>
+      <h2>Your live pages</h2>
+      <div id="mine"></div>
+    </section>
   </main>
-  <script src="/app/app.js?v=2"></script>
+  <script src="/app/app.js?v=3"></script>
 </body>
 </html>

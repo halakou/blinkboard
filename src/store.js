@@ -112,6 +112,20 @@ export async function listLiveAdmin(db, limit = 40) {
   return (res && res.results) || [];
 }
 
+export async function listLiveByOwner(db, ownerId, limit = 20) {
+  const id = Number(ownerId);
+  if (!Number.isInteger(id) || id <= 0) return [];
+  const cap = Math.min(Math.max(Number(limit) || 20, 1), 40);
+  const res = await db.prepare(
+    `SELECT code, kind, title, theme, expires_at, views
+     FROM pages
+     WHERE owner_id = ? AND status = 'live' AND (expires_at IS NULL OR expires_at > ?)
+     ORDER BY paid_at DESC
+     LIMIT ?`
+  ).bind(id, Date.now(), cap).all();
+  return (res && res.results) || [];
+}
+
 export async function expireDue(db, now) {
   const res = await db.prepare(
     "UPDATE pages SET status = 'expired' WHERE status = 'live' AND expires_at IS NOT NULL AND expires_at <= ?"

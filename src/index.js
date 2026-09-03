@@ -6,7 +6,7 @@ import { qrSvg } from "./qr.js";
 import { runExpiry } from "./cron.js";
 import { downloadTelegramFile } from "./telegram.js";
 import { getPage } from "./store.js";
-import { publicPlans, handleRentApi } from "./mini.js";
+import { publicPlans, handleRentApi, handleMineApi } from "./mini.js";
 import { handleAdminApi } from "./admin.js";
 import { listLivePublic } from "./store.js";
 import {
@@ -81,6 +81,9 @@ async function asset(env, request, path, extra = {}) {
   for (const [k, v] of Object.entries(SECURITY)) headers.set(k, v);
   if (extra.csp) headers.set("Content-Security-Policy", extra.csp);
   if (extra.cache) headers.set("cache-control", extra.cache);
+  else if (path.startsWith("/app/") || path.startsWith("/admin/") || path === "/index.html" || path === "/landing.css" || path === "/landing.js") {
+    headers.set("cache-control", "no-store");
+  }
   else if (path.startsWith("/app/")) headers.set("cache-control", "no-store");
   else if (path.endsWith(".css") || path.endsWith(".js")) headers.set("cache-control", "public, max-age=3600");
   return new Response(res.body, { status: res.status, headers });
@@ -139,7 +142,7 @@ export default {
       return text(body, "text/markdown; charset=utf-8", request, "public, max-age=300");
     }
     if (request.method === "GET" && path === "/") {
-      const page = await asset(env, request, "/index.html");
+      const page = await asset(env, request, "/index.html", { cache: "no-store" });
       if (page) return page;
     }
     if (request.method === "GET" && (path === "/landing.css" || path === "/landing.js" || path === "/page.css" || path === "/page.js")) {
@@ -192,6 +195,10 @@ export default {
     }
     if (request.method === "POST" && path === "/api/admin") {
       const res = await handleAdminApi(env, request);
+      return json(res.body, res.status, request);
+    }
+    if (request.method === "POST" && path === "/api/mine") {
+      const res = await handleMineApi(env, request, origin);
       return json(res.body, res.status, request);
     }
 
