@@ -44,9 +44,13 @@
     return null;
   }
 
+  var privEl = document.getElementById("priv");
+  if (privEl) privEl.addEventListener("change", function () { haptic(); syncMain(); });
   function payLabel() {
     var p = currentPlan();
-    return p ? "Pay " + p.stars + " Stars · " + p.label : "Pay with Stars";
+    if (!p) return "Pay with Stars";
+    var extra = privEl && privEl.checked ? 5 : 0;
+    return "Pay " + (p.stars + extra) + " Stars · " + p.label;
   }
 
   function syncMain() {
@@ -173,6 +177,7 @@
       planId: state.planId,
       kind: state.kind,
       theme: state.theme,
+      private: !!(privEl && privEl.checked),
       title: titleEl.value,
       body: bodyEl.value,
       ctaUrl: ctaEl.value,

@@ -291,6 +291,18 @@ async function handleCallback(env, cq, origin) {
   }
   if (data.startsWith("theme:") && ses.state === "theme") {
     ses.data.theme = normalizeTheme(data.slice(6));
+    await putSession(env.DB, userId, "priv", ses.data);
+    await sendText(env, chatId, t(lang, "Public on @Blinkboards, or private (+5 Stars)?", "عمومی در کانال، یا خصوصی (+۵ استارز)؟"), {
+      reply_markup: kb([
+        [{ text: t(lang, "Public (channel)", "عمومی (کانال)"), callback_data: "priv:0" }],
+        [{ text: t(lang, "Private +5⭐", "خصوصی +۵⭐"), callback_data: "priv:1" }],
+        [{ text: t(lang, "Cancel", "لغو"), callback_data: "cancel" }],
+      ]),
+    });
+    return { ok: true };
+  }
+  if (data.startsWith("priv:") && ses.state === "priv") {
+    ses.data.privatePage = data.slice(5) === "1";
     await putSession(env.DB, userId, "title", ses.data);
     await sendText(env, chatId, t(lang, "Send a headline (max 80 characters).", "تیتر را بفرست (حداکثر ۸۰ نویسه)."));
     return { ok: true };
@@ -310,6 +322,7 @@ async function checkout(env, chatId, userId, data, origin, lang) {
     origin,
     skipNewLimit: true,
     theme: data.theme,
+    privatePage: !!data.privatePage,
   });
   if (!rent.ok) {
     if (rent.error === "plan") {
@@ -401,7 +414,7 @@ async function handlePaid(env, message, origin, lang) {
       `منتشر شد (${plan ? plan.label : ""}).\n${url}\nتا انقضا در @Blinkboards هم هست.`
     )
   );
-  if (page) {
+  if (page && !Number(page.private_page)) {
     await announceLive(env, {
       code: row.code,
       title: page.title,

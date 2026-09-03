@@ -24,7 +24,7 @@ function layout({ title, body, extraCss = "", origin, description = "", path = "
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 <link rel="alternate" type="text/markdown" href="${escapeAttr(path === "/" ? "/llms.txt" : path + ".md")}"/>
 <title>${escapeHtml(title)}</title>
-<link rel="stylesheet" href="/landing.css?v=2"/>
+<link rel="stylesheet" href="/landing.css?v=3"/>
 ${extraCss}
 </head>
 <body>
@@ -119,13 +119,15 @@ export function renderLegal(kind, origin) {
 }
 
 export function renderGone(status = "expired") {
-  const title = status === "blocked" ? "Page removed" : "Page expired";
+  const title = status === "blocked" ? "Page removed" : "This Blinkboard has expired";
   const line = status === "blocked"
     ? "This board was taken down."
-    : "This board’s rental ended.";
+    : "This Blinkboard has expired. Create yours today.";
   return layout({
     title: `${title} — Blinkboard`,
-    body: `<main class="prose"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(line)}</p><p><a class="go" href="/go">Rent a new page</a></p></main>`,
+    body: `<main class="prose"><h1 dir="auto">${escapeHtml(title)}</h1><p>${escapeHtml(line)}</p><p><a class="go" href="/go">Create yours today</a></p></main>`,
+    path: "/expired",
+    description: "This Blinkboard has expired. Rent a new page from Telegram.",
   });
 }
 
@@ -152,13 +154,16 @@ export function renderBoard(page, origin) {
 <body class="theme-${escapeAttr(theme)}">
 <article class="board" data-exp="${escapeAttr(page.expires_at || "")}">
   <p class="meta"><span class="kind">${escapeHtml(page.kind)}</span> <span class="left" id="left">time left</span></p>
-  <h1>${escapeHtml(page.title)}</h1>
+  <h1 dir="auto">${escapeHtml(page.title)}</h1>
   ${img}
-  <p class="body">${escapeHtml(page.body).replace(/\n/g, "<br/>")}</p>
+  <p class="body" dir="auto">${escapeHtml(page.body).replace(/\n/g, "<br/>")}</p>
   ${cta}
   <div class="share">${qr}<p class="url">${escapeHtml(url)}</p></div>
 </article>
-<p class="by"><a href="/"><img src="/logo.svg" width="18" height="18" alt=""/> Blinkboard</a> · <a href="https://t.me/Blinkboards">live channel</a> · rented page</p>
+<p class="by">
+  <a href="/"><img src="/logo.svg" width="18" height="18" alt=""/> Blinkboard</a>
+  · <button type="button" class="report" id="report" data-code="${escapeAttr(page.code)}">Report abuse</button>
+</p>
 <script src="/page.js" defer></script>
 </body>
 </html>`;

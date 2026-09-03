@@ -1,5 +1,5 @@
 import { randomCode } from "./codes.js";
-import { getPlan } from "./pricing.js";
+import { getPlan, PRIVATE_STARS } from "./pricing.js";
 import { moderatePage } from "./moderate.js";
 import { clip, rateWindow, LIMITS } from "./security.js";
 import { getPage, insertPage, insertPayment, putSession, hitRate } from "./store.js";
@@ -24,7 +24,7 @@ export async function uniqueCode(db) {
   throw new Error("code_collision");
 }
 
-export async function createPendingRent(env, { userId, kind, title, body, ctaUrl, planId, imageFileId, origin, rateKey, skipNewLimit, theme }) {
+export async function createPendingRent(env, { userId, kind, title, body, ctaUrl, planId, imageFileId, origin, rateKey, skipNewLimit, theme, privatePage, imageBytes, imageType }) {
   const uid = Number(userId);
   const owner = Number.isInteger(uid) && uid > 0 ? uid : 0;
   const plan = getPlan(planId, planOverrides(env));
@@ -47,13 +47,18 @@ export async function createPendingRent(env, { userId, kind, title, body, ctaUrl
   const inv = await hitRate(env.DB, `invoice:${who}`, invW, LIMITS.invoice.limit);
   if (!inv.ok) return { ok: false, error: "rate", status: 429 };
 
+  const isPrivate = !!privatePage;
+  const stars = plan.stars + (isPrivate ? PRIVATE_STARS : 0);
   const code = await uniqueCode(env.DB);
   let imageKey = null;
-  if (imageFileId) {
+  if (imageBytes && imageBytes.byteLength >= 32 && env.MEDIA) {
+    imageKey = `${code}.jpg`;
+    await env.MEDIA.put(imageKey, imageBytes, { httpMetadata: { contentType: imageType || "image/jpeg" } });
+  } else if (imageFileId) {
     if (env.MEDIA) {
       const file = await downloadTelegramFile(env, imageFileId);
       if (!file.ok) return { ok: false, error: "photo", status: 400 };
-      imageKey = `img/${code}`;
+      imageKey = `${code}.jpg`;
       await env.MEDIA.put(imageKey, file.bytes, { httpMetadata: { contentType: file.type } });
     } else {
       imageKey = `tg:${imageFileId}`;
@@ -70,21 +75,23 @@ export async function createPendingRent(env, { userId, kind, title, body, ctaUrl
     cta_url: mod.ctaUrl,
     image_key: imageKey,
     plan_id: plan.id,
-    stars: plan.stars,
+    stars,
     eur_cents: plan.eurCents,
     status: "pending_pay",
     created_at: now,
     invoice_payload: payload,
     theme: normalizeTheme(theme),
+    private_page: isPrivate ? 1 : 0,
+    listed: isPrivate ? 0 : 1,
   });
   await insertPayment(env.DB, {
     payload,
     user_id: owner,
     code,
-    stars: plan.stars,
+    stars,
     status: "pending",
     created_at: now,
   });
   if (owner > 0) await putSession(env.DB, owner, "pay", { code, payload });
-  return { ok: true, code, payload, plan, title: mod.title, origin };
+  return { ok: true, code, payload, plan: { ...plan, stars }, title: mod.title, origin, privatePage: isPrivate };
 }

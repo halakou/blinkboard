@@ -56,3 +56,7 @@ h1 {
 .by { text-align: center; padding: 12px 0 40px; color: var(--muted); }
 .by a { color: var(--ink); }
 .by img { vertical-align: middle; border-radius: 4px; }
+.report {
+  background: none; border: 0; color: var(--muted); cursor: pointer;
+  text-decoration: underline; font: inherit;
+}

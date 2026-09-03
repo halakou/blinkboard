@@ -2,6 +2,7 @@
 
 export const DEFAULT_EUR_USD = 1.08;
 export const DEFAULT_STAR_USD = 0.013;
+export const PRIVATE_STARS = 5;
 
 export const DEFAULT_PLANS = Object.freeze([
   Object.freeze({ id: "1h", hours: 1, eurCents: 10, label: "1 hour" }),

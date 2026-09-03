@@ -44,12 +44,12 @@ export async function hitRate(db, key, windowStart, limit) {
 
 export async function insertPage(db, page) {
   await db.prepare(
-    `INSERT INTO pages (code, owner_id, kind, title, body, cta_url, image_key, plan_id, stars, eur_cents, status, created_at, invoice_payload, theme)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO pages (code, owner_id, kind, title, body, cta_url, image_key, plan_id, stars, eur_cents, status, created_at, invoice_payload, theme, private_page, listed)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     page.code, page.owner_id, page.kind, page.title, page.body, page.cta_url, page.image_key,
     page.plan_id, page.stars, page.eur_cents, page.status, page.created_at, page.invoice_payload,
-    page.theme || "classic"
+    page.theme || "classic", page.private_page ? 1 : 0, page.listed === 0 ? 0 : 1
   ).run();
 }
 
@@ -94,6 +94,7 @@ export async function listLivePublic(db, limit = 40) {
     `SELECT code, kind, title, expires_at, views
      FROM pages
      WHERE status = 'live' AND (expires_at IS NULL OR expires_at > ?)
+       AND IFNULL(private_page, 0) = 0 AND IFNULL(listed, 1) = 1
      ORDER BY paid_at DESC
      LIMIT ?`
   ).bind(Date.now(), cap).all();

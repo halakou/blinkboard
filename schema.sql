@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS pages (
   views INTEGER NOT NULL DEFAULT 0,
   invoice_payload TEXT,
   channel_msg_id INTEGER,
-  theme TEXT NOT NULL DEFAULT 'classic'
+  theme TEXT NOT NULL DEFAULT 'classic',
+  private_page INTEGER NOT NULL DEFAULT 0,
+  listed INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_pages_status_exp ON pages(status, expires_at);
@@ -53,6 +55,13 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   key TEXT PRIMARY KEY,
   window_start INTEGER NOT NULL,
   count INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS reports (
+  code TEXT NOT NULL,
+  ip TEXT NOT NULL,
+  at INTEGER NOT NULL,
+  PRIMARY KEY (code, ip)
 );
 
 CREATE TABLE IF NOT EXISTS admin_log (

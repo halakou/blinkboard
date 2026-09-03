@@ -8,6 +8,7 @@ import { downloadTelegramFile } from "./telegram.js";
 import { getPage } from "./store.js";
 import { publicPlans, handleRentApi, handleMineApi } from "./mini.js";
 import { handleAdminApi } from "./admin.js";
+import { handleReport } from "./report.js";
 import { listLivePublic } from "./store.js";
 import {
   isWorkersDev, robotsTxt, sitemapXml, llmsTxt, llmsFull, openApiSpec, agentCard, rssFeed,
@@ -127,6 +128,9 @@ export default {
         code: p.code, kind: p.kind, title: p.title, url: `${origin}/a/${p.code}`, expires_at: p.expires_at, views: p.views,
       })) }, 200, request);
     }
+    if (request.method === "GET" && path === "/expired") {
+      return html(renderGone("expired"), 200, { cache: "public, max-age=60" }, request);
+    }
     if (request.method === "GET" && path === "/go") {
       const bot = env.BOT_USERNAME || "";
       if (!bot) return json({ ok: false, error: "bot_unset" }, 503);
@@ -201,15 +205,19 @@ export default {
       const res = await handleMineApi(env, request, origin);
       return json(res.body, res.status, request);
     }
+    if (request.method === "POST" && path === "/api/report") {
+      const res = await handleReport(env, request);
+      return json(res.body, res.status, request);
+    }
 
     const board = path.match(/^\/a\/([A-Za-z0-9]+)$/);
     if (request.method === "GET" && board) {
       const code = normalizeCode(board[1]);
       if (!code) return html(renderGone("expired"), 404);
       const found = await publicPage(env, code);
-      if (found.status === 200) return html(renderBoard(found.page, origin), 200, { cache: "no-store" });
-      if (found.status === 410) return html(renderGone("expired"), 410);
-      return html(renderGone("blocked"), 404);
+      if (found.status === 200) return html(renderBoard(found.page, origin), 200, { cache: "no-store" }, request);
+      if (found.status === 410) return Response.redirect(`${origin}/expired`, 302);
+      return html(renderGone("blocked"), 404, {}, request);
     }
 
     const qr = path.match(/^\/q\/([A-Za-z0-9]+)\.svg$/);

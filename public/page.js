@@ -20,4 +20,20 @@
     requestAnimationFrame(function () { setTimeout(tick, 1000); });
   }
   tick();
+  var report = document.getElementById("report");
+  if (report) {
+    report.addEventListener("click", function () {
+      var code = report.getAttribute("data-code") || "";
+      report.disabled = true;
+      fetch("/api/report", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: code }),
+      }).then(function (r) { return r.json(); }).then(function () {
+        report.textContent = "Reported";
+      }).catch(function () {
+        report.disabled = false;
+      });
+    });
+  }
 })();

@@ -42,6 +42,7 @@ export async function handleRentApi(env, request, origin) {
     origin,
     rateKey,
     theme: body.theme,
+    privatePage: !!body.private,
   });
   if (!rent.ok) {
     return {
