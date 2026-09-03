@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Blinkboard admin</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="/app/app.css"/>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <header class="bar">
+    <span class="word"><img src="/logo.svg" width="22" height="22" alt=""/> Admin</span>
+    <span class="kicker" id="who">panel</span>
+  </header>
+  <main>
+    <p id="status" class="status" hidden></p>
+    <pre id="stats" class="lede"></pre>
+    <h2>Live pages</h2>
+    <div id="list"></div>
+  </main>
+  <script src="/admin/admin.js?v=1"></script>
+</body>
+</html>

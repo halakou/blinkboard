@@ -28,8 +28,9 @@ export async function handleRentApi(env, request, origin) {
   }
   if (!body || typeof body !== "object") return { status: 400, body: { ok: false, error: "json" } };
   const user = await verifyInitData(env.BOT_TOKEN, String(body.initData || ""));
-  const userId = user ? user.id : 0;
-  const rateKey = userId > 0 ? String(userId) : `ip:${ip}`;
+  if (!user) return { status: 401, body: { ok: false, error: "open_chat" } };
+  const userId = user.id;
+  const rateKey = String(userId);
   const cta = typeof body.ctaUrl === "string" && body.ctaUrl.trim() ? body.ctaUrl.trim() : null;
   const rent = await createPendingRent(env, {
     userId,

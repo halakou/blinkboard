@@ -87,6 +87,30 @@ export async function listLiveDue(db, now) {
   return (res && res.results) || [];
 }
 
+export async function listLivePublic(db, limit = 40) {
+  const cap = Math.min(Math.max(Number(limit) || 40, 1), 50);
+  const res = await db.prepare(
+    `SELECT code, kind, title, expires_at, views
+     FROM pages
+     WHERE status = 'live' AND (expires_at IS NULL OR expires_at > ?)
+     ORDER BY paid_at DESC
+     LIMIT ?`
+  ).bind(Date.now(), cap).all();
+  return (res && res.results) || [];
+}
+
+export async function listLiveAdmin(db, limit = 40) {
+  const cap = Math.min(Math.max(Number(limit) || 40, 1), 80);
+  const res = await db.prepare(
+    `SELECT code, kind, title, status, expires_at, views, stars, owner_id, channel_msg_id
+     FROM pages
+     WHERE status = 'live'
+     ORDER BY paid_at DESC
+     LIMIT ?`
+  ).bind(cap).all();
+  return (res && res.results) || [];
+}
+
 export async function expireDue(db, now) {
   const res = await db.prepare(
     "UPDATE pages SET status = 'expired' WHERE status = 'live' AND expires_at IS NOT NULL AND expires_at <= ?"

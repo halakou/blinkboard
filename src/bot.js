@@ -4,11 +4,12 @@ import { moderateTitle, moderateBody, validateHttpsUrl, reasonMessage } from "./
 import { isAdmin, parseAdminIds, rateWindow, LIMITS, clip } from "./security.js";
 import {
   getSession, putSession, clearSession, hitRate, getPage, updatePage,
-  getPayment, markPaid, stats, adminLog, getSetting, setSetting, bumpViews,
+  getPayment, markPaid, stats, adminLog, getSetting, setSetting, bumpViews, listLiveAdmin,
 } from "./store.js";
 import { sendText, sendInvoice, answerCb, answerPreCheckout, kb } from "./telegram.js";
 import { createPendingRent } from "./rent.js";
-import { announceLive, dropChannelPost, channelPublicUrl } from "./channel.js";
+import { announceLive, channelPublicUrl } from "./channel.js";
+import { userIsAdmin, expireCode, blockCode, notifyAdmins } from "./admin.js";
 
 function t(lang, en, fa) {
   return lang === "fa" ? fa : en;
@@ -24,11 +25,6 @@ async function admins(env) {
   const boot = await getSetting(env.DB, "bootstrap_admin");
   if (boot) extra.push(Number(boot));
   return { envList: env.ADMIN_IDS, extra };
-}
-
-async function userIsAdmin(env, userId) {
-  const a = await admins(env);
-  return isAdmin(userId, a.envList, a.extra);
 }
 
 async function maybeBootstrap(env, userId) {
@@ -88,10 +84,10 @@ function startText(lang) {
   );
 }
 
-function startKeyboard(lang, origin, env) {
+async function startKeyboard(lang, origin, env, userId) {
   const site = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
   const ch = channelPublicUrl(env) || "https://t.me/Blinkboards";
-  return kb([
+  const rows = [
     [{ text: t(lang, "Open Mini App", "باز کردن مینی‌اپ"), web_app: { url: `${site}/app` } }],
     [{ text: t(lang, "Rent in chat", "اجاره در چت"), callback_data: "new" }],
     [
@@ -99,7 +95,11 @@ function startKeyboard(lang, origin, env) {
       { text: t(lang, "Website", "سایت"), url: site },
     ],
     [{ text: t(lang, "How it works", "روش کار"), callback_data: "help" }],
-  ]);
+  ];
+  if (userId && (await userIsAdmin(env, userId))) {
+    rows.splice(1, 0, [{ text: t(lang, "Admin panel", "پنل ادمین"), web_app: { url: `${site}/admin` } }]);
+  }
+  return kb(rows);
 }
 
 async function beginNew(env, chatId, userId, lang) {
@@ -158,14 +158,25 @@ async function handleMessage(env, message, origin) {
   if (cmd === "/start") {
     const payload = text.split(/\s+/).slice(1).join(" ").toLowerCase();
     if (payload === "new") return beginNew(env, chatId, userId, lang);
-    await sendText(env, chatId, startText(lang), { reply_markup: startKeyboard(lang, origin, env) });
+    await sendText(env, chatId, startText(lang), { reply_markup: await startKeyboard(lang, origin, env, userId) });
+    return { ok: true };
+  }
+  if (cmd === "/whoami") {
+    const admin = await userIsAdmin(env, userId);
+    await sendText(env, chatId, admin ? `admin ${userId}` : `user ${userId}`);
+    return { ok: true };
+  }
+  if (cmd === "/support") {
+    const rest = text.replace(/^\/support(@\w+)?/i, "").trim() || "(empty)";
+    await notifyAdmins(env, `Support ${userId}: ${rest}`);
+    await sendText(env, chatId, t(lang, "Sent to the operator.", "برای اپراتور فرستاده شد."));
     return { ok: true };
   }
   if (cmd === "/rules") {
     await sendText(env, chatId, t(lang, "No spam, phishing, malware, scams, or illegal content. https links only. No shorteners. No free HTML. Live pages are also listed on @Blinkboards until expiry. Admin can expire or block instantly.", "اسپم، فیشینگ، بدافزار، کلاهبرداری و محتوای غیرقانونی ممنوع. فقط لینک https. بدون کوتاه‌کننده. بدون HTML آزاد. صفحات زنده تا انقضا در @Blinkboards هم می‌آیند. ادمین می‌تواند فوری مسدود کند."));
     return { ok: true };
   }
-  if (cmd === "/stats" || cmd === "/block" || cmd === "/expire") {
+  if (cmd === "/stats" || cmd === "/block" || cmd === "/expire" || cmd === "/live") {
     return handleAdmin(env, message, lang);
   }
 
@@ -401,33 +412,29 @@ async function handleAdmin(env, message, lang) {
     await sendText(env, chatId, `live ${s.live || 0}\nexpired ${s.expired || 0}\nblocked ${s.blocked || 0}\npending ${s.pending || 0}\nviews ${s.views || 0}\nstars ${s.stars || 0}`);
     return { ok: true };
   }
-  const code = normalizeCode(parts[1] || "");
-  if (!code) {
-    await sendText(env, chatId, "Usage: /block CODE reason | /expire CODE");
+  if (cmd === "/live") {
+    const rows = await listLiveAdmin(env.DB);
+    if (!rows.length) {
+      await sendText(env, chatId, "No live pages.");
+      return { ok: true };
+    }
+    const lines = rows.map((r) => `${r.code} · ${r.kind} · ${r.title}`).join("\n");
+    await sendText(env, chatId, clip(lines, 3500));
     return { ok: true };
   }
-  const page = await getPage(env.DB, code);
-  if (!page) {
-    await sendText(env, chatId, "Unknown code.");
+  const code = normalizeCode(parts[1] || "");
+  if (!code) {
+    await sendText(env, chatId, "Usage: /block CODE reason | /expire CODE | /live | /stats");
     return { ok: true };
   }
   if (cmd === "/expire") {
-    if (page.channel_msg_id) await dropChannelPost(env, page.channel_msg_id);
-    await updatePage(env.DB, code, { status: "expired", expires_at: Date.now(), channel_msg_id: null });
-    if (page.image_key) {
-      try { await env.MEDIA.delete(page.image_key); } catch {}
-      await updatePage(env.DB, code, { image_key: null });
-    }
-    await adminLog(env.DB, userId, "expire", code, "");
-    await sendText(env, chatId, `Expired ${code}`);
+    const res = await expireCode(env, code, userId);
+    await sendText(env, chatId, res.ok ? `Expired ${res.code}` : "Unknown code.");
     return { ok: true };
   }
   if (cmd === "/block") {
-    if (page.channel_msg_id) await dropChannelPost(env, page.channel_msg_id);
-    const reason = clip(parts.slice(2).join(" ") || "blocked", 200);
-    await updatePage(env.DB, code, { status: "blocked", blocked_at: Date.now(), block_reason: reason, channel_msg_id: null });
-    await adminLog(env.DB, userId, "block", code, reason);
-    await sendText(env, chatId, `Blocked ${code}`);
+    const res = await blockCode(env, code, parts.slice(2).join(" "), userId);
+    await sendText(env, chatId, res.ok ? `Blocked ${res.code}` : "Unknown code.");
     return { ok: true };
   }
   return { ok: true };

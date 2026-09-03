@@ -7,4 +7,6 @@ node_modules/
 *.log
 .DS_Store
 secrets/
+backups/
 pages-alias/.wrangler/
+
