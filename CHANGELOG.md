@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.1.3
+
+- GEO: `/ai.txt`, `/.well-known/llms.txt`, inline JSON-LD (Organization, WebSite, SoftwareApplication, FAQPage, BreadcrumbList)
+- SEO: lastmod in sitemap, OG/Twitter complete on landing and inner pages, HTML 404/expired `noindex`
+
 ## v2.1.2
 
 - IndexNow key at site root so Bing (and other engines) can be notified of URL changes without the Webmaster UI

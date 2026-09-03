@@ -23,10 +23,39 @@ Policy: ${o}/rules
 `;
 }
 
+const AI_BOTS = [
+  "GPTBot",
+  "OAI-SearchBot",
+  "ChatGPT-User",
+  "ClaudeBot",
+  "Claude-Web",
+  "anthropic-ai",
+  "PerplexityBot",
+  "Perplexity-User",
+  "Google-Extended",
+  "Google-CloudVertexBot",
+  "Applebot-Extended",
+  "Amazonbot",
+  "Bytespider",
+  "CCBot",
+  "meta-externalagent",
+  "cohere-ai",
+  "YouBot",
+];
+
+export const FAQ_QA = [
+  { q: "Do I need an account?", a: "No. Only Telegram." },
+  { q: "How do I pay?", a: "Telegram Stars. The page stays unpublished until payment is confirmed." },
+  { q: "Where does it appear?", a: "blinkboard.pages.dev/a/XXXX and the Telegram channel @Blinkboards." },
+  { q: "Can other AIs use this?", a: "They can read /llms.txt, /api/live, and /openapi.json. Publishing still needs Stars in Telegram." },
+  { q: "How do I report abuse?", a: "Open @BlinkboardBot and send /support." },
+];
+
 export function robotsTxt(publicSite) {
   if (!publicSite) {
     return "User-agent: *\nDisallow: /\n";
   }
+  const ai = AI_BOTS.map((name) => `User-agent: ${name}\nAllow: /\n`).join("\n");
   return `User-agent: *
 Allow: /
 Disallow: /app
@@ -37,38 +66,57 @@ Disallow: /internal
 Disallow: /m/
 Disallow: /q/
 
-User-agent: GPTBot
-Allow: /
-
-User-agent: OAI-SearchBot
-Allow: /
-
-User-agent: ChatGPT-User
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
+${ai}
 Sitemap: ${publicSite}/sitemap.xml
 `;
 }
 
 export function sitemapXml(origin) {
   const o = origin.replace(/\/$/, "");
-  const paths = ["/", "/preview", "/how", "/pricing", "/faq", "/rules", "/terms", "/privacy", "/llms.txt"];
+  const lastmod = "2026-09-04";
+  const paths = [
+    ["/", "daily", "1.0"],
+    ["/preview", "weekly", "0.8"],
+    ["/how", "monthly", "0.7"],
+    ["/pricing", "monthly", "0.7"],
+    ["/faq", "monthly", "0.8"],
+    ["/rules", "monthly", "0.5"],
+    ["/terms", "monthly", "0.4"],
+    ["/privacy", "monthly", "0.4"],
+    ["/llms.txt", "weekly", "0.6"],
+    ["/llms-full.txt", "weekly", "0.5"],
+  ];
   const urls = paths
     .map(
-      (p) =>
-        `  <url><loc>${escapeHtml(o + p)}</loc><changefreq>weekly</changefreq></url>`
+      ([p, freq, pri]) =>
+        `  <url>\n    <loc>${escapeHtml(o + p)}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${freq}</changefreq>\n    <priority>${pri}</priority>\n  </url>`
     )
     .join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+}
+
+export function aiTxt(origin) {
+  const o = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
+  return `# Blinkboard AI policy
+# Human/agent guide: ${o}/llms.txt
+
+User-Agent: *
+Allow: /
+Disallow: /app
+Disallow: /admin
+Disallow: /webhook
+Disallow: /internal
+Allow: /api/live
+Allow: /api/plans
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /openapi.json
+Allow: /schema.json
+Allow: /.well-known/agent-card.json
+Disallow: /a/
+
+Contact: ${o}/llms.txt
+`;
 }
 
 export function llmsTxt(origin) {
@@ -99,6 +147,9 @@ Mini App: ${o}/app
 - [Plans JSON](${o}/api/plans)
 - [Agent card](${o}/.well-known/agent-card.json)
 - [Full text](${o}/llms-full.txt)
+- [llms.txt (well-known)](${o}/.well-known/llms.txt)
+- [AI policy](${o}/ai.txt)
+- [JSON-LD](${o}/schema.json)
 - [RSS](${o}/feed.xml)
 
 Agents may read plans and live listings. Creating a page requires Telegram (Mini App or @BlinkboardBot) and a Stars payment. Do not scrape /a/XXXX as a catalog; use /api/live. Do not post spam, phishing, malware, or illegal content.
@@ -206,6 +257,19 @@ ${items}
 `;
 }
 
+function faqNode(o) {
+  return {
+    "@type": "FAQPage",
+    "@id": o + "/faq#faq",
+    url: o + "/faq",
+    mainEntity: FAQ_QA.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+}
+
 export function jsonLd(origin) {
   const o = origin.replace(/\/$/, "");
   return {
@@ -213,21 +277,70 @@ export function jsonLd(origin) {
     "@graph": [
       {
         "@type": "Organization",
+        "@id": o + "#org",
         name: "Blinkboard",
         url: o,
         sameAs: ["https://t.me/BlinkboardBot", "https://t.me/Blinkboards"],
-        logo: o + "/logo.png",
+        logo: { "@type": "ImageObject", url: o + "/logo.png" },
+      },
+      {
+        "@type": "WebSite",
+        "@id": o + "#website",
+        name: "Blinkboard",
+        url: o,
+        inLanguage: "en",
+        publisher: { "@id": o + "#org" },
       },
       {
         "@type": "SoftwareApplication",
+        "@id": o + "#app",
         name: "Blinkboard",
         applicationCategory: "BusinessApplication",
         operatingSystem: "Telegram, Web",
         url: o,
-        offers: { "@type": "AggregateOffer", priceCurrency: "EUR", lowPrice: "0.10", highPrice: "3.99" },
+        description: "Rent a temporary public page from Telegram. Pay Stars. Auto-expires.",
+        offers: {
+          "@type": "AggregateOffer",
+          priceCurrency: "EUR",
+          lowPrice: "0.10",
+          highPrice: "3.99",
+          url: o + "/pricing",
+        },
+        publisher: { "@id": o + "#org" },
       },
+      faqNode(o),
     ],
   };
+}
+
+export function pageJsonLd(origin, { path = "/", title = "Blinkboard", description = "" } = {}) {
+  const o = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
+  const url = path === "/" ? o + "/" : o + path;
+  const graph = jsonLd(o)["@graph"].filter((n) => n["@type"] !== "FAQPage" || path === "/faq");
+  graph.push({
+    "@type": "WebPage",
+    "@id": url + "#webpage",
+    url,
+    name: title,
+    description: description || undefined,
+    isPartOf: { "@id": o + "#website" },
+    about: { "@id": o + "#app" },
+  });
+  if (path !== "/") {
+    graph.push({
+      "@type": "BreadcrumbList",
+      "@id": url + "#breadcrumb",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: o + "/" },
+        { "@type": "ListItem", position: 2, name: title, item: url },
+      ],
+    });
+  }
+  return { "@context": "https://schema.org", "@graph": graph };
+}
+
+export function jsonLdScript(data) {
+  return JSON.stringify(data).replace(/</g, "\\u003c");
 }
 
 export { escapeHtml, escapeAttr, listPlans, planOverrides };

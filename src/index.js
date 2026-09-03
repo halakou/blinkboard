@@ -1,7 +1,7 @@
 import { normalizeCode } from "./codes.js";
 import { secretsEqual } from "./security.js";
 import { handleUpdate, publicPage } from "./bot.js";
-import { renderBoard, renderGone, renderLegal, pageMarkdown, renderPreview, renderSampleIndex } from "./html.js";
+import { renderBoard, renderGone, renderNotFound, renderLegal, pageMarkdown, renderPreview, renderSampleIndex } from "./html.js";
 import { qrSvg } from "./qr.js";
 import { runExpiry } from "./cron.js";
 import { downloadTelegramFile } from "./telegram.js";
@@ -11,7 +11,7 @@ import { handleAdminApi } from "./admin.js";
 import { handleReport } from "./report.js";
 import { listLivePublic } from "./store.js";
 import {
-  isWorkersDev, robotsTxt, sitemapXml, llmsTxt, llmsFull, openApiSpec, agentCard, rssFeed, securityTxt, jsonLd,
+  isWorkersDev, robotsTxt, sitemapXml, llmsTxt, llmsFull, openApiSpec, agentCard, rssFeed, securityTxt, jsonLd, aiTxt,
 } from "./discover.js";
 import { planOverrides } from "./rent.js";
 import { listPlans } from "./pricing.js";
@@ -113,8 +113,11 @@ export default {
       if (isWorkersDev(request)) return new Response("Not found", { status: 404, headers: SECURITY });
       return text(sitemapXml(origin), "application/xml; charset=utf-8", request, "public, max-age=300");
     }
-    if (request.method === "GET" && path === "/llms.txt") {
+    if (request.method === "GET" && (path === "/llms.txt" || path === "/.well-known/llms.txt")) {
       return text(llmsTxt(origin), "text/markdown; charset=utf-8", request, "public, max-age=300");
+    }
+    if (request.method === "GET" && path === "/ai.txt") {
+      return text(aiTxt(origin), "text/plain; charset=utf-8", request, "public, max-age=300");
     }
     if (request.method === "GET" && path === "/llms-full.txt") {
       return text(llmsFull(origin, listPlans(planOverrides(env))), "text/markdown; charset=utf-8", request, "public, max-age=300");
@@ -328,7 +331,7 @@ export default {
     if (request.method === "GET" && path === "/") {
       return json({ ok: true, service: "blinkboard", hint: "landing missing" }, 500);
     }
-    return new Response("Not found", { status: 404, headers: SECURITY });
+    return html(renderNotFound(origin), 404, {}, request);
   },
 
   async scheduled(controller, env) {

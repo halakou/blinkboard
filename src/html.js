@@ -1,37 +1,49 @@
 import { escapeHtml, escapeAttr } from "./escape.js";
 import { formatEur, listPlans } from "./pricing.js";
 import { normalizeTheme, themeHref, THEMES, samplePage } from "./themes.js";
+import { FAQ_QA, pageJsonLd, jsonLdScript } from "./discover.js";
 
-function layout({ title, body, extraCss = "", origin, description = "", path = "/" }) {
+function layout({ title, body, extraCss = "", origin, description = "", path = "/", robots = "index,follow" }) {
   const o = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
   const url = o + path;
   const desc = description || "Rent a temporary public page from Telegram. Pay Stars. Auto-expires.";
+  const ld = jsonLdScript(pageJsonLd(o, { path, title, description: desc }));
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="theme-color" content="#0d1117"/>
+<meta name="robots" content="${escapeAttr(robots)}"/>
 <meta name="description" content="${escapeAttr(desc)}"/>
 <link rel="canonical" href="${escapeAttr(url)}"/>
 <meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Blinkboard"/>
+<meta property="og:locale" content="en_US"/>
 <meta property="og:title" content="${escapeAttr(title)}"/>
 <meta property="og:description" content="${escapeAttr(desc)}"/>
 <meta property="og:url" content="${escapeAttr(url)}"/>
 <meta property="og:image" content="${escapeAttr(o + "/logo.png")}"/>
+<meta property="og:image:alt" content="Blinkboard"/>
 <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="${escapeAttr(title)}"/>
+<meta name="twitter:description" content="${escapeAttr(desc)}"/>
+<meta name="twitter:image" content="${escapeAttr(o + "/logo.png")}"/>
 <link rel="icon" href="/favicon.ico" sizes="32x32"/>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 <link rel="alternate" type="application/ld+json" href="/schema.json"/>
+<link rel="alternate" type="application/rss+xml" title="Blinkboard live" href="/feed.xml"/>
+<link rel="sitemap" type="application/xml" href="/sitemap.xml"/>
 <link rel="alternate" type="text/markdown" href="${escapeAttr(path === "/" ? "/llms.txt" : path + ".md")}"/>
+<script type="application/ld+json">${ld}</script>
 <title>${escapeHtml(title)}</title>
 <link rel="stylesheet" href="/landing.css?v=5"/>
 ${extraCss}
 </head>
 <body>
 <header class="bar">
-  <a class="brand" href="/"><img src="/logo.svg" width="28" height="28" alt=""/>Blinkboard</a>
+  <a class="brand" href="/"><img src="/logo.svg" width="28" height="28" alt="Blinkboard"/>Blinkboard</a>
   <a class="go" href="/go">Open in Telegram</a>
 </header>
 ${body}
@@ -77,11 +89,8 @@ const COPY = {
     description: "FAQ: no accounts, Stars only, live pages expire, agents can read /api/live.",
     md: "No site accounts. Pay Telegram Stars. Pages expire automatically. Agents should use /api/plans and /api/live. Creating a page requires Telegram.",
     html: `<main class="prose"><h1>FAQ</h1>
-<p><strong>Do I need an account?</strong> No. Only Telegram.</p>
-<p><strong>How do I pay?</strong> Telegram Stars. The page stays unpublished until payment is confirmed.</p>
-<p><strong>Where does it appear?</strong> <code>blinkboard.pages.dev/a/XXXX</code> and the channel @Blinkboards.</p>
-<p><strong>Can other AIs use this?</strong> They can read <a href="/llms.txt">/llms.txt</a>, <a href="/api/live">/api/live</a>, and <a href="/openapi.json">/openapi.json</a>. Publishing still needs Stars in Telegram.</p>
-<p><strong>How do I report abuse?</strong> Open the bot and send <code>/support</code>.</p></main>`,
+<dl>${FAQ_QA.map((item) => `<dt>${escapeHtml(item.q)}</dt><dd>${escapeHtml(item.a)}</dd>`).join("")}</dl>
+<p>Machine files: <a href="/llms.txt">/llms.txt</a>, <a href="/ai.txt">/ai.txt</a>, <a href="/openapi.json">/openapi.json</a>, <a href="/api/live">/api/live</a>.</p></main>`,
   },
   rules: {
     title: "Rules — Blinkboard",
@@ -130,7 +139,19 @@ export function renderGone(status = "expired") {
     title: `${title} — Blinkboard`,
     body: `<main class="prose"><h1 dir="auto">${escapeHtml(title)}</h1><p>${escapeHtml(line)}</p><p><a class="go" href="/go">Create yours today</a></p></main>`,
     path: "/expired",
+    robots: "noindex,follow",
     description: "This Blinkboard has expired. Rent a new page from Telegram.",
+  });
+}
+
+export function renderNotFound(origin) {
+  return layout({
+    title: "Not found — Blinkboard",
+    origin,
+    path: "/404",
+    robots: "noindex,follow",
+    description: "That Blinkboard page does not exist.",
+    body: `<main class="prose"><h1>Not found</h1><p>That page does not exist.</p><p><a class="go" href="/">Home</a></p></main>`,
   });
 }
 
@@ -177,7 +198,7 @@ export function renderBoard(page, origin) {
   <div class="share">${qr}<p class="url">${escapeHtml(url)}</p></div>
 </article>
 <p class="by">
-  <a href="/"><img src="/logo.svg" width="18" height="18" alt=""/> Blinkboard</a>
+  <a href="/"><img src="/logo.svg" width="18" height="18" alt="Blinkboard"/> Blinkboard</a>
   · <button type="button" class="report" id="report" data-code="${escapeAttr(page.code)}">Report abuse</button>
 </p>
 <script src="/page.js" defer></script>
@@ -202,7 +223,7 @@ export function renderSampleIndex(origin) {
   const cards = THEMES.map((th) => {
     const s = samplePage(th.id);
     return `<a class="sample-card" href="/preview/${escapeAttr(th.id)}">
-      <img src="/samples/${escapeAttr(th.id)}.svg" alt=""/>
+      <img src="/samples/${escapeAttr(th.id)}.svg" alt="${escapeHtml(th.label)} sample"/>
       <strong>${escapeHtml(th.label)}</strong>
       <span>${escapeHtml(s.title)}</span>
     </a>`;
