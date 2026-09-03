@@ -42,18 +42,36 @@ export async function answerPreCheckout(env, id, ok, error) {
   return tgCall(env, "answerPreCheckoutQuery", body);
 }
 
-export async function sendInvoice(env, { chatId, title, description, payload, stars }) {
+function starsInvoiceFields({ title, description, payload, stars }) {
   const n = Number(stars);
-  if (!Number.isInteger(n) || n < 1 || n > 2500) return { ok: false, description: "bad_stars" };
-  return tgCall(env, "sendInvoice", {
-    chat_id: chatId,
+  if (!Number.isInteger(n) || n < 1 || n > 2500) return null;
+  return {
     title: String(title).slice(0, 32),
     description: String(description).slice(0, 255),
     payload: String(payload).slice(0, 128),
     provider_token: "",
     currency: "XTR",
     prices: [{ label: `${n} Stars`, amount: n }],
-  });
+  };
+}
+
+export async function sendInvoice(env, { chatId, title, description, payload, stars }) {
+  const fields = starsInvoiceFields({ title, description, payload, stars });
+  if (!fields) return { ok: false, description: "bad_stars" };
+  return tgCall(env, "sendInvoice", { chat_id: chatId, ...fields });
+}
+
+export async function createInvoiceLink(env, { title, description, payload, stars }) {
+  const fields = starsInvoiceFields({ title, description, payload, stars });
+  if (!fields) return { ok: false, description: "bad_stars" };
+  return tgCall(env, "createInvoiceLink", fields);
+}
+
+export function invoiceUrlFrom(link) {
+  const raw = link && link.ok ? link.result : null;
+  if (typeof raw === "string" && raw) return raw;
+  if (raw && typeof raw.url === "string" && raw.url) return raw.url;
+  return null;
 }
 
 export async function downloadTelegramFile(env, fileId) {

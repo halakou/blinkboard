@@ -6,6 +6,7 @@ import { qrSvg } from "./qr.js";
 import { runExpiry } from "./cron.js";
 import { setWebhook, downloadTelegramFile } from "./telegram.js";
 import { getPage } from "./store.js";
+import { publicPlans, handleRentApi } from "./mini.js";
 
 const SECURITY = {
   "X-Content-Type-Options": "nosniff",
@@ -14,6 +15,9 @@ const SECURITY = {
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
   "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
 };
+
+const MINI_CSP =
+  "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://telegram.org; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors https://web.telegram.org https://telegram.org 'self'";
 
 function html(body, status = 200, extra = {}) {
   return new Response(body, {
@@ -38,13 +42,16 @@ export function publicOrigin(env, request) {
   return new URL(request.url).origin;
 }
 
-async function asset(env, request, path) {
+async function asset(env, request, path, extra = {}) {
   if (!env.ASSETS) return null;
   const res = await env.ASSETS.fetch(new Request("https://assets.local" + path, { method: "GET" }));
   if (!res.ok) return null;
   const headers = new Headers(res.headers);
   for (const [k, v] of Object.entries(SECURITY)) headers.set(k, v);
-  if (path.endsWith(".css") || path.endsWith(".js")) headers.set("cache-control", "public, max-age=3600");
+  if (extra.csp) headers.set("Content-Security-Policy", extra.csp);
+  if (extra.cache) headers.set("cache-control", extra.cache);
+  else if (path.startsWith("/app/")) headers.set("cache-control", "no-store");
+  else if (path.endsWith(".css") || path.endsWith(".js")) headers.set("cache-control", "public, max-age=3600");
   return new Response(res.body, { status: res.status, headers });
 }
 
@@ -60,7 +67,7 @@ export default {
     if (request.method === "GET" && path === "/go") {
       const bot = env.BOT_USERNAME || "";
       if (!bot) return json({ ok: false, error: "bot_unset" }, 503);
-      return Response.redirect(`https://t.me/${bot}?start=new`, 302);
+      return Response.redirect(`https://t.me/${bot}`, 302);
     }
     if (request.method === "GET" && (path === "/rules" || path === "/terms" || path === "/privacy")) {
       return html(renderLegal(path.slice(1), origin), 200, { cache: "public, max-age=300" });
@@ -72,6 +79,21 @@ export default {
     if (request.method === "GET" && (path === "/landing.css" || path === "/page.css" || path === "/page.js")) {
       const page = await asset(env, request, path);
       if (page) return page;
+    }
+    if (request.method === "GET" && (path === "/app" || path === "/app/")) {
+      const page = await asset(env, request, "/app/index.html", { cache: "no-store", csp: MINI_CSP });
+      if (page) return page;
+    }
+    if (request.method === "GET" && (path === "/app/app.css" || path === "/app/app.js")) {
+      const page = await asset(env, request, path, { cache: "no-store" });
+      if (page) return page;
+    }
+    if (request.method === "GET" && path === "/api/plans") {
+      return json({ ok: true, plans: publicPlans(env) });
+    }
+    if (request.method === "POST" && path === "/api/rent") {
+      const res = await handleRentApi(env, request, origin);
+      return json(res.body, res.status);
     }
 
     const board = path.match(/^\/a\/([A-Za-z0-9]+)$/);

@@ -9,7 +9,7 @@ Worker origin (webhook): `https://blinkboard.halakou.workers.dev`
 
 ## What it does
 
-A visitor talks only to the Telegram bot.
+A visitor talks only to the Telegram bot or its Mini App (menu button).
 
 1. Pick duration: 1h / 6h / 24h / 3d / 7d  
 2. Pick type: promo, notice, or link  
@@ -54,7 +54,7 @@ Stars are derived from `EUR_USD` and `STAR_USD` (defaults 1.08 and 0.013). Chang
 
 ## Bot commands
 
-User: `/new` `/cancel` `/help` `/rules`  
+User: `/new` `/cancel` `/help` `/rules` · Mini App: menu button or `/start` → Open Mini App  
 Admin: `/stats` `/expire CODE` `/block CODE reason`  
 
 First `/start` becomes bootstrap admin if `ADMIN_IDS` is empty.

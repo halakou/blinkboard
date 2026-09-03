@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="theme-color" content="#f6f1e8"/>
+  <title>Blinkboard</title>
+  <link rel="stylesheet" href="/app/app.css"/>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <header class="bar">
+    <span class="word">Blinkboard</span>
+    <span class="kicker">rent a page</span>
+  </header>
+  <main>
+    <p class="lede">Write a public page here. Pay Stars. Get <code>/a/XXXX</code>. It disappears when the clock ends. No account.</p>
+    <p id="status" class="status" hidden></p>
+
+    <h2>How long</h2>
+    <div id="plans" class="row"></div>
+
+    <h2>Type</h2>
+    <div class="row">
+      <button type="button" class="chip kind on" data-kind="promo">Promo</button>
+      <button type="button" class="chip kind" data-kind="notice">Notice</button>
+      <button type="button" class="chip kind" data-kind="link">Link</button>
+    </div>
+
+    <label>Headline
+      <input id="title" maxlength="80" autocomplete="off"/>
+    </label>
+    <label>Text
+      <textarea id="body" maxlength="600" rows="5"></textarea>
+    </label>
+    <label>https link (optional, required for Link)
+      <input id="cta" maxlength="2048" inputmode="url" placeholder="https://"/>
+    </label>
+    <button type="button" id="pay" class="go">Pay with Stars</button>
+    <p class="hint">Photo is optional in the chat bot if you need one. After pay, the live URL is also sent in chat.</p>
+  </main>
+  <script src="/app/app.js?v=1"></script>
+</body>
+</html>

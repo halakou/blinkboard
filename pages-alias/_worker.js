@@ -11,6 +11,8 @@ export default {
     }
     headers.set("X-Forwarded-Host", incoming.host);
     headers.set("X-Forwarded-Proto", incoming.protocol.replace(":", ""));
+    const ip = request.headers.get("CF-Connecting-IP");
+    if (ip) headers.set("X-Forwarded-For", ip);
     const init = {
       method: request.method,
       headers,

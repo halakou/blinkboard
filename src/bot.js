@@ -1,12 +1,13 @@
-import { randomCode, normalizeCode } from "./codes.js";
+import { normalizeCode } from "./codes.js";
 import { getPlan, listPlans, formatEur } from "./pricing.js";
-import { moderatePage, moderateTitle, moderateBody, validateHttpsUrl, reasonMessage } from "./moderate.js";
+import { moderateTitle, moderateBody, validateHttpsUrl, reasonMessage } from "./moderate.js";
 import { isAdmin, parseAdminIds, rateWindow, LIMITS, clip } from "./security.js";
 import {
-  getSession, putSession, clearSession, hitRate, insertPage, getPage, updatePage,
-  insertPayment, getPayment, markPaid, stats, adminLog, getSetting, setSetting, bumpViews,
+  getSession, putSession, clearSession, hitRate, getPage, updatePage,
+  getPayment, markPaid, stats, adminLog, getSetting, setSetting, bumpViews,
 } from "./store.js";
-import { sendText, sendInvoice, answerCb, answerPreCheckout, kb, downloadTelegramFile } from "./telegram.js";
+import { sendText, sendInvoice, answerCb, answerPreCheckout, kb } from "./telegram.js";
+import { createPendingRent } from "./rent.js";
 
 function t(lang, en, fa) {
   return lang === "fa" ? fa : en;
@@ -70,35 +71,27 @@ function kindKeyboard(lang) {
   ]);
 }
 
-async function uniqueCode(db) {
-  for (let i = 0; i < 12; i++) {
-    const code = randomCode();
-    const exists = await getPage(db, code);
-    if (!exists) return code;
-  }
-  throw new Error("code_collision");
-}
-
 function helpText(lang) {
   return t(
     lang,
-    "Blinkboard rents a public page for a few hours. No account. No Mini App — this chat is the product.\n\n/new — rent a page\n/cancel — stop\n/rules — what is blocked\n\nYou pick a duration, send text (and optional photo + https link), pay in Telegram Stars, and get a URL like /a/XXXX. The page dies when the clock runs out.",
-    "Blinkboard یک صفحهٔ عمومی موقت اجاره می‌دهد. بدون حساب. مینی‌اپ ندارد — همه چیز همین چت است.\n\n/new — صفحه جدید\n/cancel — توقف\n/rules — موارد ممنوع\n\nمدت را انتخاب می‌کنی، متن (و در صورت نیاز عکس و لینک https) می‌فرستی، با استارز تلگرام پرداخت می‌کنی، آدرس /a/XXXX می‌گیری. بعد از انقضا صفحه خاموش می‌شود."
+    "Blinkboard rents a public page for a few hours. No account.\n\nMenu button / Mini App — fill the form and pay Stars\n/new — same flow in chat (photo supported)\n/cancel — stop\n/rules — what is blocked\n\nYou get a URL like /a/XXXX. The page dies when the clock runs out.",
+    "Blinkboard یک صفحهٔ عمومی موقت اجاره می‌دهد. بدون حساب.\n\nدکمهٔ منو / مینی‌اپ — فرم و پرداخت استارز\n/new — همان جریان در چت (عکس هم می‌شود)\n/cancel — توقف\n/rules — موارد ممنوع\n\nآدرس /a/XXXX می‌گیری. بعد از انقضا صفحه خاموش می‌شود."
   );
 }
 
 function startText(lang) {
   return t(
     lang,
-    "Blinkboard — rent a public page from this chat.\n\nNo site account. No Mini App. You write here, pay Stars, get a URL like blinkboard.pages.dev/a/XXXX. When the time is up, the page is gone.\n\n1 hour €0.10 · 6h €0.25 · 24h €0.79 · 3d €1.99 · 7d €3.99",
-    "Blinkboard — از همین چت یک صفحهٔ عمومی اجاره کن.\n\nبدون حساب سایت. مینی‌اپ ندارد. اینجا می‌نویسی، با استارز پرداخت می‌کنی، آدرس blinkboard.pages.dev/a/XXXX می‌گیری. وقت که تمام شود صفحه خاموش است.\n\n۱ ساعت €0.10 · ۶ساعت €0.25 · ۲۴ساعت €0.79 · ۳روز €1.99 · ۷روز €3.99"
+    "Blinkboard — rent a public page from Telegram.\n\nOpen the Mini App (menu) or rent in this chat. Pay Stars. Get blinkboard.pages.dev/a/XXXX. When the time is up, the page is gone.\n\n1 hour €0.10 · 6h €0.25 · 24h €0.79 · 3d €1.99 · 7d €3.99",
+    "Blinkboard — از تلگرام یک صفحهٔ عمومی اجاره کن.\n\nمینی‌اپ (منو) را باز کن یا در همین چت اجاره کن. با استارز پرداخت کن. آدرس blinkboard.pages.dev/a/XXXX. وقت که تمام شود صفحه خاموش است.\n\n۱ ساعت €0.10 · ۶ساعت €0.25 · ۲۴ساعت €0.79 · ۳روز €1.99 · ۷روز €3.99"
   );
 }
 
 function startKeyboard(lang, origin) {
   const site = String(origin || "https://blinkboard.pages.dev").replace(/\/$/, "");
   return kb([
-    [{ text: t(lang, "Rent a page", "اجارهٔ صفحه"), callback_data: "new" }],
+    [{ text: t(lang, "Open Mini App", "باز کردن مینی‌اپ"), web_app: { url: `${site}/app` } }],
+    [{ text: t(lang, "Rent in chat", "اجاره در چت"), callback_data: "new" }],
     [
       { text: t(lang, "How it works", "روش کار"), callback_data: "help" },
       { text: t(lang, "Website", "سایت"), url: site },
@@ -277,73 +270,36 @@ async function handleCallback(env, cq, origin) {
 }
 
 async function checkout(env, chatId, userId, data, origin, lang) {
-  const plan = getPlan(data.planId, ov(env));
-  if (!plan) {
-    await sendText(env, chatId, t(lang, "Pick a duration again with /new.", "دوباره /new بزن."));
-    return { ok: true };
-  }
-  const mod = moderatePage({
+  const rent = await createPendingRent(env, {
+    userId,
     kind: data.kind,
     title: data.title,
     body: data.body,
     ctaUrl: data.ctaUrl,
+    planId: data.planId,
+    imageFileId: data.imageFileId,
+    origin,
+    skipNewLimit: true,
   });
-  if (!mod.ok) {
-    await sendText(env, chatId, reasonMessage(mod.reason));
-    await putSession(env.DB, userId, "url", data);
-    return { ok: true };
-  }
-  const inv = await gated(env, userId, "invoice");
-  if (!inv.ok) {
-    await sendText(env, chatId, t(lang, "Too many invoices. Wait a bit.", "فاکتور زیاد. کمی صبر کن."));
-    return { ok: true };
-  }
-  const code = await uniqueCode(env.DB);
-  let imageKey = null;
-  if (data.imageFileId) {
-    if (env.MEDIA) {
-      const file = await downloadTelegramFile(env, data.imageFileId);
-      if (!file.ok) {
-        await sendText(env, chatId, t(lang, "Could not store that photo. /skip or send another.", "عکس ذخیره نشد. /skip یا عکس دیگر."));
-        await putSession(env.DB, userId, "image", data);
-        return { ok: true };
-      }
-      imageKey = `img/${code}`;
-      await env.MEDIA.put(imageKey, file.bytes, { httpMetadata: { contentType: file.type } });
+  if (!rent.ok) {
+    if (rent.error === "plan") {
+      await sendText(env, chatId, t(lang, "Pick a duration again with /new.", "دوباره /new بزن."));
+    } else if (rent.error === "photo") {
+      await sendText(env, chatId, t(lang, "Could not store that photo. /skip or send another.", "عکس ذخیره نشد. /skip یا عکس دیگر."));
+      await putSession(env.DB, userId, "image", data);
+    } else if (rent.error === "rate" || rent.error === "limit") {
+      await sendText(env, chatId, t(lang, "Too many invoices. Wait a bit.", "فاکتور زیاد. کمی صبر کن."));
     } else {
-      imageKey = `tg:${data.imageFileId}`;
+      await sendText(env, chatId, reasonMessage(rent.error));
+      await putSession(env.DB, userId, "url", data);
     }
+    return { ok: true };
   }
-  const payload = clip(`bb:${code}:${plan.id}:${userId}`, 128);
-  const now = Date.now();
-  await insertPage(env.DB, {
-    code,
-    owner_id: userId,
-    kind: mod.kind,
-    title: mod.title,
-    body: mod.body,
-    cta_url: mod.ctaUrl,
-    image_key: imageKey,
-    plan_id: plan.id,
-    stars: plan.stars,
-    eur_cents: plan.eurCents,
-    status: "pending_pay",
-    created_at: now,
-    invoice_payload: payload,
-  });
-  await insertPayment(env.DB, {
-    payload,
-    user_id: userId,
-    code,
-    stars: plan.stars,
-    status: "pending",
-    created_at: now,
-  });
-  await putSession(env.DB, userId, "pay", { code, payload });
+  const { code, payload, plan, title } = rent;
   const invRes = await sendInvoice(env, {
     chatId,
     title: clip(`Blinkboard ${plan.label}`, 32),
-    description: clip(`${mod.title} · live ${plan.label} · ${origin}/a/${code}`, 255),
+    description: clip(`${title} · live ${plan.label} · ${origin}/a/${code}`, 255),
     payload,
     stars: plan.stars,
   });
@@ -402,6 +358,7 @@ async function handlePaid(env, message, origin, lang) {
     status: "live",
     paid_at: now,
     expires_at: now + ttl,
+    owner_id: Number(message.from && message.from.id) || page.owner_id,
   });
   await clearSession(env.DB, message.from.id);
   const url = `${origin}/a/${row.code}`;
