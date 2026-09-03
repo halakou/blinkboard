@@ -1,0 +1,441 @@
+import { randomCode, normalizeCode } from "./codes.js";
+import { getPlan, listPlans, formatEur } from "./pricing.js";
+import { moderatePage, moderateTitle, moderateBody, validateHttpsUrl, reasonMessage } from "./moderate.js";
+import { isAdmin, parseAdminIds, rateWindow, LIMITS, clip } from "./security.js";
+import {
+  getSession, putSession, clearSession, hitRate, insertPage, getPage, updatePage,
+  insertPayment, getPayment, markPaid, stats, adminLog, getSetting, setSetting, bumpViews,
+} from "./store.js";
+import { sendText, sendInvoice, answerCb, answerPreCheckout, kb, downloadTelegramFile } from "./telegram.js";
+
+function t(lang, en, fa) {
+  return lang === "fa" ? fa : en;
+}
+
+function langOf(from) {
+  const c = String((from && from.language_code) || "").toLowerCase();
+  return c.startsWith("fa") ? "fa" : "en";
+}
+
+async function admins(env) {
+  const extra = [];
+  const boot = await getSetting(env.DB, "bootstrap_admin");
+  if (boot) extra.push(Number(boot));
+  return { envList: env.ADMIN_IDS, extra };
+}
+
+async function userIsAdmin(env, userId) {
+  const a = await admins(env);
+  return isAdmin(userId, a.envList, a.extra);
+}
+
+async function maybeBootstrap(env, userId) {
+  const a = await admins(env);
+  if (parseAdminIds(a.envList).length || a.extra.length) return;
+  await setSetting(env.DB, "bootstrap_admin", String(userId));
+}
+
+async function gated(env, userId, kind) {
+  const spec = LIMITS[kind];
+  const w = rateWindow(Date.now(), spec.windowMs);
+  return hitRate(env.DB, `${kind}:${userId}`, w, spec.limit);
+}
+
+function ov(env) {
+  const eurUsd = Number(env && env.EUR_USD);
+  const starUsd = Number(env && env.STAR_USD);
+  return {
+    eurUsd: Number.isFinite(eurUsd) && eurUsd > 0 ? eurUsd : undefined,
+    starUsd: Number.isFinite(starUsd) && starUsd > 0 ? starUsd : undefined,
+  };
+}
+
+function planKeyboard(lang, env) {
+  const plans = listPlans(ov(env));
+  const rows = [];
+  for (let i = 0; i < plans.length; i += 1) {
+    const p = plans[i];
+    const label = `${p.label} · ${formatEur(p.eurCents)} · ${p.stars}⭐`;
+    rows.push([{ text: label, callback_data: `plan:${p.id}` }]);
+  }
+  rows.push([{ text: t(lang, "Cancel", "لغو"), callback_data: "cancel" }]);
+  return kb(rows);
+}
+
+function kindKeyboard(lang) {
+  return kb([
+    [{ text: t(lang, "Promo", "تبلیغ"), callback_data: "kind:promo" }, { text: t(lang, "Notice", "اطلاع"), callback_data: "kind:notice" }],
+    [{ text: t(lang, "Link page", "صفحه لینک"), callback_data: "kind:link" }],
+    [{ text: t(lang, "Cancel", "لغو"), callback_data: "cancel" }],
+  ]);
+}
+
+async function uniqueCode(db) {
+  for (let i = 0; i < 12; i++) {
+    const code = randomCode();
+    const exists = await getPage(db, code);
+    if (!exists) return code;
+  }
+  throw new Error("code_collision");
+}
+
+function helpText(lang) {
+  return t(
+    lang,
+    "Blinkboard rents a public page for a few hours. No account.\n\n/new — rent a page\n/cancel — stop\n/rules — what is blocked\n\nYou pick a duration, send text (and optional photo + https link), pay in Telegram Stars, and get a URL like /a/XXXX. The page dies when the clock runs out.",
+    "Blinkboard یک صفحهٔ عمومی موقت اجاره می‌دهد. بدون حساب.\n\n/new — صفحه جدید\n/cancel — توقف\n/rules — موارد ممنوع\n\nمدت را انتخاب می‌کنی، متن (و در صورت نیاز عکس و لینک https) می‌فرستی، با استارز تلگرام پرداخت می‌کنی، آدرس /a/XXXX می‌گیری. بعد از انقضا صفحه خاموش می‌شود."
+  );
+}
+
+export async function handleUpdate(env, update, origin) {
+  if (update.pre_checkout_query) return handlePreCheckout(env, update.pre_checkout_query);
+  if (update.callback_query) return handleCallback(env, update.callback_query, origin);
+  if (update.message) return handleMessage(env, update.message, origin);
+  return { ok: true, ignored: true };
+}
+
+async function handleMessage(env, message, origin) {
+  const from = message.from;
+  const userId = from && from.id;
+  const chatId = message.chat && message.chat.id;
+  if (!userId || !chatId || message.chat.type !== "private") return { ok: true };
+  const lang = langOf(from);
+  await maybeBootstrap(env, userId);
+
+  if (message.successful_payment) {
+    return handlePaid(env, message, origin, lang);
+  }
+
+  const rate = await gated(env, userId, "userMsg");
+  if (!rate.ok) {
+    await sendText(env, chatId, t(lang, "Slow down. Try again in a few minutes.", "کمی صبر کن و دوباره تلاش کن."));
+    return { ok: true, limited: true };
+  }
+
+  const text = typeof message.text === "string" ? message.text.trim() : "";
+  const cmd = text.split(/\s+/)[0].split("@")[0].toLowerCase();
+
+  if (cmd === "/cancel") {
+    await clearSession(env.DB, userId);
+    await sendText(env, chatId, t(lang, "Cancelled.", "لغو شد."));
+    return { ok: true };
+  }
+  if (cmd === "/start" || cmd === "/new" || cmd === "/help") {
+    if (cmd === "/help") {
+      await sendText(env, chatId, helpText(lang));
+      return { ok: true };
+    }
+    const np = await gated(env, userId, "newPage");
+    if (!np.ok) {
+      await sendText(env, chatId, t(lang, "Daily page limit reached.", "سقف روزانه پر شده."));
+      return { ok: true };
+    }
+    await putSession(env.DB, userId, "plan", {});
+    await sendText(env, chatId, t(lang, "How long should this page stay up?", "صفحه چند ساعت بالا بماند؟"), {
+      reply_markup: planKeyboard(lang, env),
+    });
+    return { ok: true };
+  }
+  if (cmd === "/rules") {
+    await sendText(env, chatId, t(lang, "No spam, phishing, malware, scams, or illegal content. https links only. No shorteners. No free HTML. Admin can expire or block instantly.", "اسپم، فیشینگ، بدافزار، کلاهبرداری و محتوای غیرقانونی ممنوع. فقط لینک https. بدون کوتاه‌کننده. بدون HTML آزاد. ادمین می‌تواند فوری مسدود کند."));
+    return { ok: true };
+  }
+  if (cmd === "/stats" || cmd === "/block" || cmd === "/expire") {
+    return handleAdmin(env, message, lang);
+  }
+
+  const ses = await getSession(env.DB, userId);
+  if (ses.state === "title") {
+    const m = moderateTitle(text);
+    if (!m.ok) {
+      await sendText(env, chatId, reasonMessage(m.reason));
+      return { ok: true };
+    }
+    ses.data.title = m.text;
+    await putSession(env.DB, userId, "body", ses.data);
+    await sendText(env, chatId, t(lang, "Now the body text (max 600 characters).", "متن صفحه را بفرست (حداکثر ۶۰۰ نویسه)."));
+    return { ok: true };
+  }
+  if (ses.state === "body") {
+    const m = moderateBody(text);
+    if (!m.ok) {
+      await sendText(env, chatId, reasonMessage(m.reason));
+      return { ok: true };
+    }
+    ses.data.body = m.text;
+    await putSession(env.DB, userId, "image", ses.data);
+    await sendText(env, chatId, t(lang, "Send a photo, or /skip.", "یک عکس بفرست، یا /skip."));
+    return { ok: true };
+  }
+  if (ses.state === "image") {
+    if (cmd === "/skip") {
+      ses.data.imageFileId = null;
+      await putSession(env.DB, userId, "url", ses.data);
+      await sendText(env, chatId, t(lang, "Optional https link, or /skip.", "لینک https اختیاری، یا /skip."));
+      return { ok: true };
+    }
+    const photo = Array.isArray(message.photo) ? message.photo[message.photo.length - 1] : null;
+    if (!photo || !photo.file_id) {
+      await sendText(env, chatId, t(lang, "Send a photo, or /skip.", "یک عکس بفرست، یا /skip."));
+      return { ok: true };
+    }
+    if (photo.file_size && photo.file_size > 2_500_000) {
+      await sendText(env, chatId, t(lang, "Photo is too large (2.5 MB max).", "عکس بزرگ است."));
+      return { ok: true };
+    }
+    ses.data.imageFileId = photo.file_id;
+    await putSession(env.DB, userId, "url", ses.data);
+    await sendText(env, chatId, t(lang, "Optional https link, or /skip.", "لینک https اختیاری، یا /skip."));
+    return { ok: true };
+  }
+  if (ses.state === "url") {
+    if (cmd === "/skip") ses.data.ctaUrl = null;
+    else {
+      const u = validateHttpsUrl(text);
+      if (!u.ok) {
+        await sendText(env, chatId, reasonMessage(u.reason));
+        return { ok: true };
+      }
+      ses.data.ctaUrl = u.url;
+    }
+    return checkout(env, chatId, userId, ses.data, origin, lang);
+  }
+
+  await sendText(env, chatId, helpText(lang));
+  return { ok: true };
+}
+
+async function handleCallback(env, cq, origin) {
+  const userId = cq.from && cq.from.id;
+  const chatId = cq.message && cq.message.chat && cq.message.chat.id;
+  const data = String(cq.data || "");
+  const lang = langOf(cq.from);
+  if (!userId || !chatId) return { ok: true };
+  await answerCb(env, cq.id);
+  if (data === "cancel") {
+    await clearSession(env.DB, userId);
+    await sendText(env, chatId, t(lang, "Cancelled.", "لغو شد."));
+    return { ok: true };
+  }
+  const ses = await getSession(env.DB, userId);
+  if (data.startsWith("plan:") && ses.state === "plan") {
+    const plan = getPlan(data.slice(5), ov(env));
+    if (!plan) {
+      await sendText(env, chatId, t(lang, "Unknown plan.", "پلن نامعتبر."));
+      return { ok: true };
+    }
+    ses.data.planId = plan.id;
+    await putSession(env.DB, userId, "kind", ses.data);
+    await sendText(env, chatId, t(lang, "What kind of page?", "نوع صفحه؟"), { reply_markup: kindKeyboard(lang) });
+    return { ok: true };
+  }
+  if (data.startsWith("kind:") && ses.state === "kind") {
+    const kind = data.slice(5);
+    if (!["promo", "notice", "link"].includes(kind)) return { ok: true };
+    ses.data.kind = kind;
+    await putSession(env.DB, userId, "title", ses.data);
+    await sendText(env, chatId, t(lang, "Send a headline (max 80 characters).", "تیتر را بفرست (حداکثر ۸۰ نویسه)."));
+    return { ok: true };
+  }
+  return { ok: true };
+}
+
+async function checkout(env, chatId, userId, data, origin, lang) {
+  const plan = getPlan(data.planId, ov(env));
+  if (!plan) {
+    await sendText(env, chatId, t(lang, "Pick a duration again with /new.", "دوباره /new بزن."));
+    return { ok: true };
+  }
+  const mod = moderatePage({
+    kind: data.kind,
+    title: data.title,
+    body: data.body,
+    ctaUrl: data.ctaUrl,
+  });
+  if (!mod.ok) {
+    await sendText(env, chatId, reasonMessage(mod.reason));
+    await putSession(env.DB, userId, "url", data);
+    return { ok: true };
+  }
+  const inv = await gated(env, userId, "invoice");
+  if (!inv.ok) {
+    await sendText(env, chatId, t(lang, "Too many invoices. Wait a bit.", "فاکتور زیاد. کمی صبر کن."));
+    return { ok: true };
+  }
+  const code = await uniqueCode(env.DB);
+  let imageKey = null;
+  if (data.imageFileId) {
+    if (env.MEDIA) {
+      const file = await downloadTelegramFile(env, data.imageFileId);
+      if (!file.ok) {
+        await sendText(env, chatId, t(lang, "Could not store that photo. /skip or send another.", "عکس ذخیره نشد. /skip یا عکس دیگر."));
+        await putSession(env.DB, userId, "image", data);
+        return { ok: true };
+      }
+      imageKey = `img/${code}`;
+      await env.MEDIA.put(imageKey, file.bytes, { httpMetadata: { contentType: file.type } });
+    } else {
+      imageKey = `tg:${data.imageFileId}`;
+    }
+  }
+  const payload = clip(`bb:${code}:${plan.id}:${userId}`, 128);
+  const now = Date.now();
+  await insertPage(env.DB, {
+    code,
+    owner_id: userId,
+    kind: mod.kind,
+    title: mod.title,
+    body: mod.body,
+    cta_url: mod.ctaUrl,
+    image_key: imageKey,
+    plan_id: plan.id,
+    stars: plan.stars,
+    eur_cents: plan.eurCents,
+    status: "pending_pay",
+    created_at: now,
+    invoice_payload: payload,
+  });
+  await insertPayment(env.DB, {
+    payload,
+    user_id: userId,
+    code,
+    stars: plan.stars,
+    status: "pending",
+    created_at: now,
+  });
+  await putSession(env.DB, userId, "pay", { code, payload });
+  const invRes = await sendInvoice(env, {
+    chatId,
+    title: clip(`Blinkboard ${plan.label}`, 32),
+    description: clip(`${mod.title} · live ${plan.label} · ${origin}/a/${code}`, 255),
+    payload,
+    stars: plan.stars,
+  });
+  if (!invRes || !invRes.ok) {
+    await sendText(env, chatId, t(lang, "Could not create the Stars invoice. Try /new later.", "فاکتور استارز ساخته نشد. بعداً /new."));
+    return { ok: true, invoice: invRes };
+  }
+  await sendText(
+    env,
+    chatId,
+    t(
+      lang,
+      `Pay ${plan.stars} Stars (${formatEur(plan.eurCents)}) to publish. The page stays unpublished until Telegram confirms payment.`,
+      `برای انتشار ${plan.stars} استارز (${formatEur(plan.eurCents)}) بپرداز. تا تأیید تلگرام صفحه منتشر نمی‌شود.`
+    )
+  );
+  return { ok: true };
+}
+
+async function handlePreCheckout(env, q) {
+  const payload = String(q.invoice_payload || "");
+  const pay = await getPayment(env.DB, payload);
+  if (!pay || pay.status !== "pending") {
+    await answerPreCheckout(env, q.id, false, "This order is no longer valid.");
+    return { ok: true };
+  }
+  const page = await getPage(env.DB, pay.code);
+  if (!page || page.status !== "pending_pay") {
+    await answerPreCheckout(env, q.id, false, "This page is no longer awaiting payment.");
+    return { ok: true };
+  }
+  if (Number(q.total_amount) !== Number(pay.stars) || q.currency !== "XTR") {
+    await answerPreCheckout(env, q.id, false, "Amount mismatch.");
+    return { ok: true };
+  }
+  await answerPreCheckout(env, q.id, true);
+  return { ok: true };
+}
+
+async function handlePaid(env, message, origin, lang) {
+  const pay = message.successful_payment;
+  if (!pay || pay.currency !== "XTR") return { ok: true };
+  const payload = String(pay.invoice_payload || "");
+  const row = await getPayment(env.DB, payload);
+  const chatId = message.chat.id;
+  if (!row || row.status !== "pending") {
+    await sendText(env, chatId, t(lang, "Payment already processed.", "پرداخت قبلاً ثبت شده."));
+    return { ok: true };
+  }
+  const page = await getPage(env.DB, row.code);
+  const plan = getPlan(page && page.plan_id, ov(env));
+  const now = Date.now();
+  const ttl = plan ? plan.hours * 3600 * 1000 : 3600 * 1000;
+  await markPaid(env.DB, payload, pay.telegram_payment_charge_id || "", now);
+  await updatePage(env.DB, row.code, {
+    status: "live",
+    paid_at: now,
+    expires_at: now + ttl,
+  });
+  await clearSession(env.DB, message.from.id);
+  const url = `${origin}/a/${row.code}`;
+  await sendText(
+    env,
+    chatId,
+    t(
+      lang,
+      `Live for ${plan ? plan.label : "a while"}.\n${url}\nIt turns off automatically.`,
+      `منتشر شد (${plan ? plan.label : ""}).\n${url}\nخودکار خاموش می‌شود.`
+    )
+  );
+  return { ok: true };
+}
+
+async function handleAdmin(env, message, lang) {
+  const userId = message.from.id;
+  const chatId = message.chat.id;
+  if (!(await userIsAdmin(env, userId))) {
+    await sendText(env, chatId, t(lang, "Not an admin.", "ادمین نیستی."));
+    return { ok: true };
+  }
+  const parts = String(message.text || "").trim().split(/\s+/);
+  const cmd = parts[0].split("@")[0].toLowerCase();
+  if (cmd === "/stats") {
+    const s = await stats(env.DB);
+    await sendText(env, chatId, `live ${s.live || 0}\nexpired ${s.expired || 0}\nblocked ${s.blocked || 0}\npending ${s.pending || 0}\nviews ${s.views || 0}\nstars ${s.stars || 0}`);
+    return { ok: true };
+  }
+  const code = normalizeCode(parts[1] || "");
+  if (!code) {
+    await sendText(env, chatId, "Usage: /block CODE reason | /expire CODE");
+    return { ok: true };
+  }
+  const page = await getPage(env.DB, code);
+  if (!page) {
+    await sendText(env, chatId, "Unknown code.");
+    return { ok: true };
+  }
+  if (cmd === "/expire") {
+    await updatePage(env.DB, code, { status: "expired", expires_at: Date.now() });
+    if (page.image_key) {
+      try { await env.MEDIA.delete(page.image_key); } catch {}
+      await updatePage(env.DB, code, { image_key: null });
+    }
+    await adminLog(env.DB, userId, "expire", code, "");
+    await sendText(env, chatId, `Expired ${code}`);
+    return { ok: true };
+  }
+  if (cmd === "/block") {
+    const reason = clip(parts.slice(2).join(" ") || "blocked", 200);
+    await updatePage(env.DB, code, { status: "blocked", blocked_at: Date.now(), block_reason: reason });
+    await adminLog(env.DB, userId, "block", code, reason);
+    await sendText(env, chatId, `Blocked ${code}`);
+    return { ok: true };
+  }
+  return { ok: true };
+}
+
+export async function publicPage(env, code, { countView = true } = {}) {
+  const page = await getPage(env.DB, code);
+  if (!page) return { status: 404, page: null };
+  if (page.status === "live" && page.expires_at && page.expires_at <= Date.now()) {
+    await updatePage(env.DB, code, { status: "expired" });
+    return { status: 410, page: { ...page, status: "expired" } };
+  }
+  if (page.status === "live") {
+    if (countView) await bumpViews(env.DB, code);
+    return { status: 200, page };
+  }
+  if (page.status === "blocked") return { status: 404, page };
+  return { status: 410, page };
+}
